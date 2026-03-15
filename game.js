@@ -312,6 +312,7 @@ let currentTab='log',selectedForBreeding=[],bestEverTraits={};
 let autoBreedInterval=null,autoBreederPaused=false,autoBredTotal=0;
 let pendingImmortalId=null,combatSubTab='pve';
 let pvpTarget=null,pvpMyImmortal=null;
+window.isGuest=false;
 
 function defaultState(){
   return{
@@ -1225,11 +1226,19 @@ function renderGeneVault(){
 
 window.renderLeaderboard=(entries,currentUid)=>{
   const c=document.getElementById('leaderboard-container');if(!c)return;
+  if(window.isGuest){
+    c.innerHTML=`<div style="color:var(--muted);font-size:13px;line-height:1.9;border-left:2px solid var(--border);padding-left:14px">
+      <p style="color:var(--text);margin-bottom:8px">// LEADERBOARD</p>
+      <p>You are playing as a guest. The leaderboard is only available to registered players.</p>
+      <p style="margin-top:12px"><a href="#" onclick="document.getElementById('game-screen').classList.add('hidden');document.getElementById('auth-screen').classList.remove('hidden');return false;" style="color:var(--green)">[ CREATE AN ACCOUNT ]</a> to appear on the leaderboard and access PvP.</p>
+    </div>`;
+    return;
+  }
   const currentTotal=getMilestoneCounts().total;
   let html=`<div class="lb-header"><span class="lb-title">// LEADERBOARD</span><button class="lb-refresh" onclick="window.refreshLeaderboard?.()">[ REFRESH ]</button></div>
   <p class="lb-formula">Score = (<span>fitness×200</span> + <span>gen×10</span> + <span>bred×3</span> + <span>culled×5</span> + <span>gold</span> + <span>💎×100</span>) ÷ 10</p>`;
   if(!entries?.length){html+=`<p class="lb-empty">No entries yet.</p>`;c.innerHTML=html;return;}
-  const hasImmortals=(state.immortals||[]).length>0;
+  const hasImmortals=!window.isGuest&&(state.immortals||[]).length>0;
   // Recalculate scores with current formula
   const processed=entries.map(e=>({...e,displayScore:Math.floor((safeNum(e.rawFitness||e.highestFitness)*200+safeNum(e.rawGeneration||e.generation)*10+safeNum(e.rawTotalBred||e.totalBred)*3+safeNum(e.rawTotalCulled||e.totalCulled)*5+safeNum(e.rawTotalGoldEarned||e.totalGoldEarned)+safeNum(e.rawTotalDiamondsEarned||e.totalDiamondsEarned)*100)/10)})).sort((a,b)=>b.displayScore-a.displayScore);
   html+=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>SCORE</th><th>MILESTONES</th><th>GEN</th>${hasImmortals?'<th></th>':''}</tr></thead><tbody>`;
