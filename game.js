@@ -116,7 +116,7 @@ const GENE_VAULTS=[
   {id:'flora',name:'Flora Strain',theme:'OVERGROWTH',cssClass:'vb-flora',cost:1000,desc:'From ancient seed vaults and jungle biomass.',
    icons:['🌸','🌺','🌻','🌹','🌷','🌿','🍀','🍁','🌾','🌲','🌳','🌴','🌵','🎋','🍄','🌱','🌼','💐','🍃','🎄','🪴','🌏','🪨','🍂','🌍']},
   {id:'cosmos',name:'Cosmos Sequence',theme:'DEEP SPACE',cssClass:'vb-cosmos',cost:1000,desc:'Extraterrestrial material from meteorite fragments.',
-   icons:['🌟','⭐','💫','✨','🌙','🌠','🚀','🛸','🪐','☄️','🌌','🔭','🛰️','🌍','🌕','🌑','🪨','🌒','🌓','🌔','🌛','🌜','🌝','🌞','🔆']},
+   icons:['🌟','⭐','💫','✨','🌙','🌠','🚀','🛸','🪐','☄️','🌌','🔭','🛰️','🌍','🌕','🌐','🪨','🌒','🌓','🌔','🌛','🌜','🌝','🌞','🔆']},
   {id:'predator',name:'Apex Predator',theme:'HUNT',cssClass:'vb-predator',cost:1000,desc:'From the most dangerous specimens ever catalogued.',
    icons:['🦁','🐯','🐆','🐻','🦊','🦝','🐺','🦅','🦉','🐍','🦂','🕷️','🦇','🦃','🦚','🦜','🦋','🪲','🐝','🦏','🐘','🦬','🐃','🦌','🔥']},
   {id:'ancient',name:'Ancient Legacy',theme:'PRIMORDIAL',cssClass:'vb-ancient',cost:1000,desc:'Relics from civilisations that understood genetics before us.',
@@ -269,17 +269,17 @@ const MILESTONE_TRACKS=[
 //  SECRET MILESTONES — unusual deliberate actions only
 // ═══════════════════════════════════════════════════════════
 const SECRET_MILESTONES=[
-  {id:'ms_s_bg',name:'You Wish',desc:'Try to set your username to "breeding-ground".',check:s=>!!s.triedUsernameBG,gp:5},
-  {id:'ms_s_night',name:'Night Owl',desc:'Save the game between 2am and 4am local time.',check:s=>!!s.savedAtMidnight,gp:5},
-  {id:'ms_s_incest',name:'Incestuous',desc:'Use Selective Breeding on the same pair 10 times in a row.',check:s=>safeNum(s.sameParentCount)>=10,gp:5},
-  {id:'ms_s_obsessed',name:'Obsessed',desc:'Open the same Gene Vault 50+ times.',check:s=>GENE_VAULTS.some(v=>safeNum(s[`vault_${v.id}_opens`])>=50),gp:5},
-  {id:'ms_s_thirsty',name:'Thirsty',desc:'Attempt to breed when population is at the cap 10 times.',check:s=>safeNum(s.breedCapHits)>=10,gp:5},
-  {id:'ms_s_refresh',name:'Refresh Addict',desc:'Refresh the leaderboard 20 times.',check:s=>safeNum(s.lbRefreshCount)>=20,gp:5},
-  {id:'ms_s_auto',name:'Auto Addict',desc:'Let the auto-breeder run 500 breeds without a single manual breed.',check:s=>safeNum(s.autoOnlyBreeds)>=500,gp:5},
-  {id:'ms_s_iron',name:'Iron Will',desc:'Reach generation 200 without buying any diamond upgrades.',check:s=>s.generation>=200&&safeNum(s.upgrades?.traitCapBoost)===0&&safeNum(s.upgrades?.eliteMutation)===0&&safeNum(s.upgrades?.deepArchive)===0,gp:5},
-  {id:'ms_s_completionist',name:'Completionist',desc:`Own all ${TOTAL_ICONS} icons.`,check:s=>(s.ownedIcons||[]).length>=TOTAL_ICONS,gp:5},
-  {id:'ms_s_pvpwin',name:'The Challenger',desc:'Win your first PvP fight.',check:s=>safeNum(s.pvpWins)>=1,gp:5},
-  {id:'ms_s_dispose',name:'Necessary Evil',desc:'Dispose of an immortal.',check:s=>!!s.hasDisposedImmortal,gp:5},
+  {id:'ms_s_bg',        name:'You Wish',          desc:'Try to set your username to "breeding-ground".',                     check:s=>!!s.triedUsernameBG,            gp:5},
+  {id:'ms_s_night',     name:'Night Owl',          desc:'Save the game between 2am and 4am local time.',                     check:s=>!!s.savedAtMidnight,            gp:5},
+  {id:'ms_s_incest',    name:'Incestuous',         desc:'Use Selective Breeding on the same pair 10 times in a row.',        check:s=>safeNum(s.sameParentCount)>=10, gp:5},
+  {id:'ms_s_obsessed',  name:'Obsessed',           desc:'Open the same Gene Vault 50+ times.',                               check:s=>GENE_VAULTS.some(v=>safeNum(s[`vault_${v.id}_opens`])>=50), gp:5},
+  {id:'ms_s_thirsty',   name:'Thirsty',            desc:'Attempt to breed when population is at the cap, 10 times.',         check:s=>safeNum(s.breedCapHits)>=10,    gp:5},
+  {id:'ms_s_refresh',   name:'Refresh Addict',     desc:'Refresh the leaderboard 20 times.',                                 check:s=>safeNum(s.lbRefreshCount)>=20,  gp:5},
+  {id:'ms_s_auto',      name:'Auto Addict',        desc:'Let the auto-breeder run 500 breeds without a single manual breed.',check:s=>safeNum(s.autoOnlyBreeds)>=500, gp:5},
+  {id:'ms_s_iron',      name:'Iron Will',          desc:'Reach generation 200 without buying any diamond upgrades.',         check:s=>s.generation>=200&&safeNum(s.upgrades?.traitCapBoost)===0&&safeNum(s.upgrades?.eliteMutation)===0&&safeNum(s.upgrades?.deepArchive)===0, gp:5},
+  {id:'ms_s_complete',  name:'Completionist',      desc:`Own all ${TOTAL_ICONS} icons.`,                                     check:s=>(s.ownedIcons||[]).length>=TOTAL_ICONS, gp:5},
+  {id:'ms_s_pvpwin',    name:'The Challenger',     desc:'Win your first PvP fight.',                                         check:s=>safeNum(s.pvpWins)>=1,          gp:5},
+  {id:'ms_s_dispose',   name:'Necessary Evil',     desc:'Dispose of an immortal.',                                           check:s=>!!s.hasDisposedImmortal,        gp:5},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -654,7 +654,11 @@ window.runPveStage=(stageId,immortalIds)=>{
   const idx=PVE_STAGES.findIndex(s=>s.id===stageId);
   if(idx>0&&!(state.pveCompleted||[]).includes(PVE_STAGES[idx-1].id))return addLog('Complete previous stage first.','warn');
   const ids=Array.isArray(immortalIds)?immortalIds:[immortalIds];
-  const ims=ids.filter(Boolean).map(id=>(state.immortals||[]).find(x=>x.id===id)).filter(Boolean);
+  // Deduplicate: remove any id that appears more than once
+  const seen=new Set(); const uniqueIds=[];
+  for(const id of ids){ if(id&&!seen.has(id)){seen.add(id);uniqueIds.push(id);} }
+  if(ids.filter(Boolean).length!==uniqueIds.length)return addLog('You cannot use the same immortal in multiple slots.','warn');
+  const ims=uniqueIds.filter(Boolean).map(id=>(state.immortals||[]).find(x=>x.id===id)).filter(Boolean);
   if(!ims.length)return addLog('No valid immortals selected.','warn');
   const atkDefs=ims.map(im=>({...getImmortalStats(im),name:im.name}));
   const defDefs=Array.from({length:stage.enemies},(_,i)=>makePveEnemy(stage.eLevel,i));
