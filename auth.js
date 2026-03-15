@@ -5,7 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc,
-  collection, query, orderBy, limit, getDocs,
+  collection, query, orderBy, limit, getDocs, where,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -98,14 +98,38 @@ function setHeaderUsername(username) {
   if(el) el.textContent=username?`[ ${username} ]`:`[ set username ]`;
 }
 
+// Basic profanity filter — extend as needed
+const BANNED_WORDS = [
+  'fuck','shit','cunt','nigger','nigga','faggot','fag','retard','bitch','asshole',
+  'dick','cock','pussy','whore','slut','twat','bastard','wanker','prick','arse',
+  'ass','damn','crap','bollocks','tosser','spastic','spaz','tranny',
+];
+function containsProfanity(str) {
+  const lower = str.toLowerCase().replace(/[^a-z0-9]/g,'');
+  return BANNED_WORDS.some(w => lower.includes(w));
+}
+
 window.saveUsername = async () => {
   const input=document.getElementById("username-input");
   const msgEl=document.getElementById("username-message");
   const raw=(input?.value||"").trim();
-  if(!raw)          { msgEl.textContent="Enter a username.";             msgEl.className="message error"; return; }
-  if(raw.length<2)  { msgEl.textContent="At least 2 characters.";       msgEl.className="message error"; return; }
-  if(raw.length>20) { msgEl.textContent="Max 20 characters.";           msgEl.className="message error"; return; }
+  if(!raw)          { msgEl.textContent="Enter a username.";                   msgEl.className="message error"; return; }
+  if(raw.length<2)  { msgEl.textContent="At least 2 characters.";             msgEl.className="message error"; return; }
+  if(raw.length>20) { msgEl.textContent="Max 20 characters.";                 msgEl.className="message error"; return; }
   if(!/^[a-zA-Z0-9_\- ]+$/.test(raw)){ msgEl.textContent="Letters, numbers, spaces, _ and - only."; msgEl.className="message error"; return; }
+  if(containsProfanity(raw)){ msgEl.textContent="That username isn't allowed."; msgEl.className="message error"; return; }
+
+  msgEl.textContent="Checking availability…"; msgEl.className="message";
+  try {
+    const q=query(collection(db,"users"),where("username","==",raw),limit(1));
+    const snap=await getDocs(q);
+    const takenByOther=snap.docs.some(d=>d.id!==currentUser.uid);
+    if(takenByOther){ msgEl.textContent="That username is already taken."; msgEl.className="message error"; return; }
+  } catch(e){
+    console.error("Username check error:",e);
+    msgEl.textContent="Could not check availability — try again."; msgEl.className="message error"; return;
+  }
+
   msgEl.textContent="Saving…"; msgEl.className="message";
   try {
     await setDoc(doc(db,"users",currentUser.uid),{username:raw},{merge:true});
