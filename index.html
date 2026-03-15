@@ -29,6 +29,11 @@
         <button onclick="register()">[ CREATE ACCOUNT ]</button>
       </div>
       <p id="auth-message" class="message"></p>
+      <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:16px;text-align:center">
+        <p style="color:var(--muted);font-size:11px;margin-bottom:10px;letter-spacing:1px">— or —</p>
+        <button onclick="playAsGuest()" style="border-color:var(--muted);color:var(--muted);font-size:11px">[ PLAY AS GUEST ]</button>
+        <p style="color:var(--muted);font-size:10px;margin-top:8px;line-height:1.6">Progress saved locally in your browser.<br>No leaderboard or PvP access.</p>
+      </div>
     </div>
   </div>
 
@@ -102,6 +107,7 @@
       <span id="header-title">🧬 BREEDING GROUND</span>
       <span id="header-username" class="header-username" onclick="openUsernameModal()" title="Change username">—</span>
       <span id="header-user"></span>
+      <span id="guest-badge" class="hidden" style="color:var(--muted);font-size:11px;border:1px solid var(--border);padding:2px 8px;letter-spacing:1px">GUEST</span>
       <span id="autosave-flash"></span>
       <button id="logout-btn" onclick="logout()">[ logout ]</button>
     </header>
