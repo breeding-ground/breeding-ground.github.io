@@ -128,7 +128,7 @@ window.saveGame = async () => {
       setDoc(doc(db,"leaderboard",currentUser.uid),{
         uid:currentUser.uid, username, score,
         selectedIcon:    data.selectedIcon     || null,
-        highestFitness:  data.highestFitness   || 0,
+        completedMilestones: (data.completedMilestones||[]).length,
         generation:      data.generation       || 1,
         totalBred:       data.totalBred        || 0,
         totalCulled:     data.totalCulled      || 0,
