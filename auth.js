@@ -4,8 +4,8 @@ import {
   signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, doc, setDoc, getDoc,
-  collection, query, orderBy, limit, getDocs, where,
+  getFirestore, doc, setDoc, getDoc, deleteDoc,
+  collection, query, orderBy, limit, where, getDocs, addDoc, onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -21,95 +21,94 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-let currentUser      = null;
-let autosaveInterval = null;
+let currentUser        = null;
+let autosaveInterval   = null;
+let challengesUnsub    = null;
 
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUser = user;
-    document.getElementById("auth-screen").classList.add("hidden");
-    document.getElementById("game-screen").classList.remove("hidden");
-    document.getElementById("header-user").textContent = user.email;
-    await loadGame();
-    if (autosaveInterval) clearInterval(autosaveInterval);
-    autosaveInterval = setInterval(async () => { await saveGame(); flashAutosave(); }, 5 * 60 * 1000);
-  } else {
-    currentUser = null;
-    if (autosaveInterval) { clearInterval(autosaveInterval); autosaveInterval = null; }
-    document.getElementById("auth-screen").classList.remove("hidden");
-    document.getElementById("game-screen").classList.add("hidden");
-  }
-});
-
-function flashAutosave() {
-  const el = document.getElementById("autosave-flash");
-  if (!el) return;
-  el.textContent = "autosaved ✓"; el.classList.add("visible");
-  setTimeout(() => el.classList.remove("visible"), 3000);
-}
-
-window.showTab = (tab) => {
-  document.getElementById("login-form").classList.toggle("hidden",    tab !== "login");
-  document.getElementById("register-form").classList.toggle("hidden", tab !== "register");
-  document.querySelectorAll(".auth-tab").forEach((b,i)=>{
-    b.classList.toggle("active",(i===0&&tab==="login")||(i===1&&tab==="register"));
-  });
-  setAuthMsg("");
-};
-
-function setAuthMsg(msg, type="") {
-  const el=document.getElementById("auth-message");
-  el.textContent=msg; el.className="message"+(type?` ${type}`:"");
-}
-
-window.register = async () => {
-  const email=document.getElementById("reg-email").value.trim();
-  const pw=document.getElementById("reg-password").value;
-  const conf=document.getElementById("reg-confirm").value;
-  if(!email||!pw)  return setAuthMsg("Fill in all fields.","error");
-  if(pw!==conf)    return setAuthMsg("Passwords don't match.","error");
-  if(pw.length<6)  return setAuthMsg("Password needs at least 6 characters.","error");
-  try { setAuthMsg("Creating account…"); await createUserWithEmailAndPassword(auth,email,pw); }
-  catch(e){ setAuthMsg(friendlyErr(e.code),"error"); }
-};
-
-window.login = async () => {
-  const email=document.getElementById("login-email").value.trim();
-  const pw=document.getElementById("login-password").value;
-  if(!email||!pw) return setAuthMsg("Fill in all fields.","error");
-  try { setAuthMsg("Logging in…"); await signInWithEmailAndPassword(auth,email,pw); }
-  catch(e){ setAuthMsg(friendlyErr(e.code),"error"); }
-};
-
-window.logout = async () => {
-  await saveGame();
-  await signOut(auth);
-};
-
-async function loadUsername() {
-  if(!currentUser) return null;
-  try { const s=await getDoc(doc(db,"users",currentUser.uid)); return s.exists()?s.data().username||null:null; }
-  catch { return null; }
-}
-
-function setHeaderUsername(username) {
-  window._currentUsername=username||null;
-  const el=document.getElementById("header-username");
-  if(el) el.textContent=username?`[ ${username} ]`:`[ set username ]`;
-}
-
-// Basic profanity filter — extend as needed
+// ── Profanity filter ─────────────────────────────────────────
 const BANNED_WORDS = [
   'fuck','shit','cunt','nigger','nigga','faggot','fag','retard','bitch','asshole',
   'dick','cock','pussy','whore','slut','twat','bastard','wanker','prick','arse',
   'ass','damn','crap','bollocks','tosser','spastic','spaz','tranny',
 ];
 function containsProfanity(str) {
-  const lower = str.toLowerCase().replace(/[^a-z0-9]/g,'');
-  return BANNED_WORDS.some(w => lower.includes(w));
+  const lower=str.toLowerCase().replace(/[^a-z0-9]/g,'');
+  return BANNED_WORDS.some(w=>lower.includes(w));
 }
 
-window.saveUsername = async () => {
+// ── AUTH STATE ───────────────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser=user;
+    document.getElementById("auth-screen").classList.add("hidden");
+    document.getElementById("game-screen").classList.remove("hidden");
+    document.getElementById("header-user").textContent=user.email;
+    await loadGame();
+    if(autosaveInterval) clearInterval(autosaveInterval);
+    autosaveInterval=setInterval(async()=>{ await saveGame(); flashAutosave(); }, 5*60*1000);
+    subscribeToChallenges();
+  } else {
+    currentUser=null;
+    if(autosaveInterval){ clearInterval(autosaveInterval); autosaveInterval=null; }
+    if(challengesUnsub){ challengesUnsub(); challengesUnsub=null; }
+    if(window.stopAutoBreeder) window.stopAutoBreeder();
+    document.getElementById("auth-screen").classList.remove("hidden");
+    document.getElementById("game-screen").classList.add("hidden");
+  }
+});
+
+function flashAutosave() {
+  const el=document.getElementById("autosave-flash");
+  if(!el) return;
+  el.textContent="autosaved ✓"; el.classList.add("visible");
+  setTimeout(()=>el.classList.remove("visible"),3000);
+}
+
+// ── AUTH UI ──────────────────────────────────────────────────
+window.showTab=(tab)=>{
+  document.getElementById("login-form").classList.toggle("hidden",    tab!=="login");
+  document.getElementById("register-form").classList.toggle("hidden", tab!=="register");
+  document.querySelectorAll(".auth-tab").forEach((b,i)=>{
+    b.classList.toggle("active",(i===0&&tab==="login")||(i===1&&tab==="register"));
+  });
+  setAuthMsg("");
+};
+function setAuthMsg(msg,type=""){
+  const el=document.getElementById("auth-message");
+  el.textContent=msg; el.className="message"+(type?` ${type}`:"");
+}
+window.register=async()=>{
+  const email=document.getElementById("reg-email").value.trim();
+  const pw=document.getElementById("reg-password").value;
+  const conf=document.getElementById("reg-confirm").value;
+  if(!email||!pw) return setAuthMsg("Fill in all fields.","error");
+  if(pw!==conf)   return setAuthMsg("Passwords don't match.","error");
+  if(pw.length<6) return setAuthMsg("Password needs at least 6 characters.","error");
+  try{ setAuthMsg("Creating account…"); await createUserWithEmailAndPassword(auth,email,pw); }
+  catch(e){ setAuthMsg(friendlyErr(e.code),"error"); }
+};
+window.login=async()=>{
+  const email=document.getElementById("login-email").value.trim();
+  const pw=document.getElementById("login-password").value;
+  if(!email||!pw) return setAuthMsg("Fill in all fields.","error");
+  try{ setAuthMsg("Logging in…"); await signInWithEmailAndPassword(auth,email,pw); }
+  catch(e){ setAuthMsg(friendlyErr(e.code),"error"); }
+};
+window.logout=async()=>{ await saveGame(); if(window.stopAutoBreeder) window.stopAutoBreeder(); await signOut(auth); };
+
+// ── USERNAME ─────────────────────────────────────────────────
+async function loadUsername(){
+  if(!currentUser) return null;
+  try{ const s=await getDoc(doc(db,"users",currentUser.uid)); return s.exists()?s.data().username||null:null; }
+  catch{ return null; }
+}
+function setHeaderUsername(username){
+  window._currentUsername=username||null;
+  const el=document.getElementById("header-username");
+  if(el) el.textContent=username?`[ ${username} ]`:`[ set username ]`;
+}
+
+window.saveUsername=async()=>{
   const input=document.getElementById("username-input");
   const msgEl=document.getElementById("username-message");
   const raw=(input?.value||"").trim();
@@ -117,10 +116,17 @@ window.saveUsername = async () => {
   if(raw.length<2)  { msgEl.textContent="At least 2 characters.";             msgEl.className="message error"; return; }
   if(raw.length>20) { msgEl.textContent="Max 20 characters.";                 msgEl.className="message error"; return; }
   if(!/^[a-zA-Z0-9_\- ]+$/.test(raw)){ msgEl.textContent="Letters, numbers, spaces, _ and - only."; msgEl.className="message error"; return; }
+
+  // Secret: tried username "breeding-ground"
+  if(raw.toLowerCase().replace(/[^a-z0-9]/g,'').includes('breedingground')){
+    window.notifyTriedBreedingGround?.();
+    msgEl.textContent="Nice try."; msgEl.className="message error"; return;
+  }
+
   if(containsProfanity(raw)){ msgEl.textContent="That username isn't allowed."; msgEl.className="message error"; return; }
 
   msgEl.textContent="Checking availability…"; msgEl.className="message";
-  try {
+  try{
     const q=query(collection(db,"users"),where("username","==",raw),limit(1));
     const snap=await getDocs(q);
     const takenByOther=snap.docs.some(d=>d.id!==currentUser.uid);
@@ -131,7 +137,7 @@ window.saveUsername = async () => {
   }
 
   msgEl.textContent="Saving…"; msgEl.className="message";
-  try {
+  try{
     await setDoc(doc(db,"users",currentUser.uid),{username:raw},{merge:true});
     setHeaderUsername(raw);
     if(window.notifyUsernameSet) window.notifyUsernameSet();
@@ -141,34 +147,41 @@ window.saveUsername = async () => {
   } catch(e){ console.error(e); msgEl.textContent="Save failed."; msgEl.className="message error"; }
 };
 
-window.saveGame = async () => {
+// ── SAVE & LOAD ──────────────────────────────────────────────
+window.saveGame=async()=>{
   if(!currentUser) return;
   const statusEl=document.getElementById("save-status");
-  try {
+  try{
     if(statusEl){ statusEl.textContent="Saving…"; statusEl.className="message"; }
     const data=getSaveData(), score=calcScore(), username=window._currentUsername||null;
     const ms=window.getMilestoneCounts?window.getMilestoneCounts():{done:0,total:0};
+    // Midnight check
+    const h=new Date().getHours();
+    if(h>=2&&h<4) window.notifySavedAtMidnight?.();
     await Promise.all([
       setDoc(doc(db,"saves",currentUser.uid),{...data,savedAt:new Date().toISOString()}),
       setDoc(doc(db,"leaderboard",currentUser.uid),{
         uid:currentUser.uid, username, score,
-        selectedIcon:         data.selectedIcon          || null,
-        milestoneDone:        ms.done,
-        milestoneTotal:       ms.total,
-        generation:           data.generation            || 1,
-        totalBred:            data.totalBred             || 0,
-        totalCulled:          data.totalCulled           || 0,
-        totalDiamondsEarned:  data.totalDiamondsEarned   || 0,
-        updatedAt: new Date().toISOString(),
+        selectedIcon:     data.selectedIcon     || null,
+        milestoneDone:    ms.done,
+        milestoneTotal:   ms.total,
+        generation:       data.generation       || 1,
+        totalBred:        data.totalBred        || 0,
+        totalCulled:      data.totalCulled      || 0,
+        totalDiamondsEarned: data.totalDiamondsEarned || 0,
+        updatedAt:        new Date().toISOString(),
       }),
     ]);
     if(statusEl){ statusEl.textContent="Saved ✓"; statusEl.className="message success"; setTimeout(()=>{if(statusEl)statusEl.textContent="";},3000); }
-  } catch(e){ console.error("Save error:",e); if(statusEl){statusEl.textContent="Save failed.";statusEl.className="message error";} }
+  } catch(e){
+    console.error("Save error:",e);
+    if(statusEl){ statusEl.textContent="Save failed."; statusEl.className="message error"; }
+  }
 };
 
-async function loadGame() {
+async function loadGame(){
   if(!currentUser) return;
-  try {
+  try{
     const username=await loadUsername(); setHeaderUsername(username);
     if(!username) setTimeout(()=>openUsernameModal(),600);
     const snap=await getDoc(doc(db,"saves",currentUser.uid));
@@ -177,9 +190,10 @@ async function loadGame() {
   } catch(e){ console.error("Load error:",e); initNewGame(); addLog("Could not load save — starting fresh.","warn"); }
 }
 
-window.refreshLeaderboard = async () => {
+// ── LEADERBOARD ──────────────────────────────────────────────
+window.refreshLeaderboard=async()=>{
   renderLeaderboardLoading();
-  try {
+  try{
     await saveGame();
     const q=query(collection(db,"leaderboard"),orderBy("score","desc"),limit(25));
     const snap=await getDocs(q);
@@ -190,6 +204,107 @@ window.refreshLeaderboard = async () => {
     if(c) c.innerHTML='<p class="lb-empty">Could not load leaderboard.</p>';
   }
 };
+
+// ── PvP ──────────────────────────────────────────────────────
+window.sendPvpChallenge=async(target, myImmortal)=>{
+  if(!currentUser) throw new Error("Not logged in");
+  const myStats=getImmortalCombatStats(myImmortal);
+  await addDoc(collection(db,"challenges"),{
+    challengerUid:      currentUser.uid,
+    challengerUsername: window._currentUsername||"Anonymous",
+    challengerImmortalId:   myImmortal.id,
+    challengerImmortalName: myImmortal.name,
+    challengerStats:    myStats,
+    targetUid:          target.uid,
+    targetUsername:     target.username,
+    status:             "pending",
+    createdAt:          new Date().toISOString(),
+  });
+};
+
+function subscribeToChallenges(){
+  if(!currentUser) return;
+  if(challengesUnsub) challengesUnsub();
+  const q=query(collection(db,"challenges"),where("targetUid","==",currentUser.uid),where("status","==","pending"));
+  challengesUnsub=onSnapshot(q,(snap)=>{
+    const challenges=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(challenges.length){
+      document.getElementById('tab-combat')?.classList.add('has-badge');
+    }
+    window.renderPvpChallenges?.(challenges);
+  });
+}
+
+window.loadPvpChallenges=async()=>{
+  if(!currentUser) return;
+  try{
+    const q=query(collection(db,"challenges"),where("targetUid","==",currentUser.uid),where("status","==","pending"));
+    const snap=await getDocs(q);
+    window.renderPvpChallenges?.(snap.docs.map(d=>({id:d.id,...d.data()})));
+  } catch(e){ console.error("PvP challenge load error:",e); }
+};
+
+window.resolvePvpChallenge=async(challengeId, decision, myImmortalId, myStats)=>{
+  if(!currentUser||!challengeId) return;
+  try{
+    const cDoc=await getDoc(doc(db,"challenges",challengeId));
+    if(!cDoc.exists()) return;
+    const ch=cDoc.data();
+    if(decision==='declined'){
+      await setDoc(doc(db,"challenges",challengeId),{status:'declined'},{merge:true});
+      return;
+    }
+    // Simulate fight
+    const { simulateFight: sf, getImmortalCombatStats: gics } = window;
+    const attacker=myStats;
+    const defender=ch.challengerStats;
+    // Quick sim using imported logic
+    const result=simulateCombat(attacker,defender);
+    const won=result.won;
+    await Promise.all([
+      setDoc(doc(db,"challenges",challengeId),{
+        status: 'resolved', result: won ? 'defender_won' : 'challenger_won',
+        resolvedAt: new Date().toISOString(),
+        defenderUid: currentUser.uid,
+        defenderUsername: window._currentUsername||"Anonymous",
+        defenderImmortalId: myImmortalId,
+      },{merge:true}),
+    ]);
+    window.handlePvpResult?.(won, ch.challengerUsername, ch.challengerImmortalName);
+    // Notify challenger (they'll see it when they refresh leaderboard / check challenges)
+    const challengerLog={
+      type:'pvp', won:!won, opponent:window._currentUsername||"Opponent",
+      myImmortal:ch.challengerImmortalName, time:new Date().toLocaleTimeString()
+    };
+    // Store result for challenger in a results collection
+    await addDoc(collection(db,"pvp_results"),{
+      uid:         ch.challengerUid,
+      won:         !won,
+      opponentUsername: window._currentUsername||"Anonymous",
+      myImmortalName:   ch.challengerImmortalName,
+      createdAt:   new Date().toISOString(),
+    });
+  } catch(e){ console.error("PvP resolve error:",e); }
+};
+
+window.rejectPvpChallenge=async(challengeId)=>{
+  if(!challengeId) return;
+  try{ await setDoc(doc(db,"challenges",challengeId),{status:'declined'},{merge:true}); }
+  catch(e){ console.error(e); }
+};
+
+// Simple combat function mirrored here for PvP resolution
+function simulateCombat(a, d){
+  let aHp=a.hp, dHp=d.hp;
+  let turn=a.spd>=d.spd?'a':'d';
+  let rounds=0;
+  while(aHp>0&&dHp>0&&rounds<100){
+    rounds++;
+    if(turn==='a'){ dHp-=Math.max(1,a.atk-Math.floor(d.def*0.4)); turn='d'; }
+    else           { aHp-=Math.max(1,d.atk-Math.floor(a.def*0.4)); turn='a'; }
+  }
+  return { won: aHp>0 };
+}
 
 function friendlyErr(code){
   const map={
