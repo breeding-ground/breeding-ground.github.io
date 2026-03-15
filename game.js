@@ -121,11 +121,14 @@ const GENE_VAULTS=[
    icons:['🦁','🐯','🐆','🐻','🦊','🦝','🐺','🦅','🦉','🐍','🦂','🕷️','🦇','🦃','🦚','🦜','🦋','🪲','🐝','🦏','🐘','🦬','🐃','🦌','🔥']},
   {id:'ancient',name:'Ancient Legacy',theme:'PRIMORDIAL',cssClass:'vb-ancient',cost:1000,desc:'Relics from civilisations that understood genetics before us.',
    icons:['⚔️','🛡️','👑','🏺','🗿','🪬','🧿','🔱','⚜️','🪄','🗡️','🏛️','⚖️','📜','🔮','💎','🧬','🌀','🔯','⚗️','🏆','🎭','🎪','🎯','🎲']},
+  {id:'machine', name:'Synthetic Genome',  theme:'MACHINE',    cssClass:'vb-machine',  cost:1000,
+   desc:'Specimens engineered in classified laboratories. Part creature, part machine.',
+   icons:['🤖','⚙️','🔧','🔩','🛠️','💻','🖥️','🔌','💡','🔋','⚡','🧲','🪛','🔑','🗝️','📡','🔬','🧪','🧫','🏗️','🚂','🧠','💉','🩺','🤯']},
 ];
 // Boss icons (PvE exclusive — 4 total)
 const PVE_BOSS_ICONS=['🩸','👁️','💀','🌑'];
-const TOTAL_VAULT_ICONS=125;
-const TOTAL_ICONS=TOTAL_VAULT_ICONS+PVE_BOSS_ICONS.length; // 129
+const TOTAL_VAULT_ICONS=150;
+const TOTAL_ICONS=TOTAL_VAULT_ICONS+PVE_BOSS_ICONS.length; // 154
 
 let vaultPreviewId=null;
 
@@ -271,7 +274,7 @@ const MILESTONE_TRACKS=[
   {id:'research',name:'RESEARCH',val:s=>safeNum(s.research?.labInterns)+safeNum(s.research?.geneAnalysts)+safeNum(s.research?.lineageArchivists)+(s.research?.headOfResearch?1:0)+(s.research?.automatedSequencer?1:0),unit:'researchers',
    tiers:[{id:'m_first_researcher',name:'Research Initiative',target:1,gp:1},{id:'mt_res_3',name:'Growing Team',target:3,gp:1},{id:'mt_res_8',name:'Division',target:8,gp:2},{id:'mt_res_15',name:'Department',target:15,gp:2},{id:'mt_res_25',name:'Full Lab',target:25,gp:3},{id:'mt_res_37',name:'Complete Division',target:37,gp:4}]},
   {id:'icons',name:'ICON COLLECTION',val:s=>(s.ownedIcons||[]).length,unit:'icons',
-   tiers:[{id:'mt_icon_1',name:'First Find',target:1,gp:0},{id:'mt_icon_5',name:'Growing Set',target:5,gp:1},{id:'mt_icon_15',name:'Collector',target:15,gp:1},{id:'mt_icon_30',name:'Curator',target:30,gp:2},{id:'mt_icon_50',name:'Archivist',target:50,gp:2},{id:'mt_icon_80',name:'Master Collector',target:80,gp:3},{id:'mt_icon_129',name:'Complete Set',target:129,gp:5}]},
+   tiers:[{id:'mt_icon_1',name:'First Find',target:1,gp:0},{id:'mt_icon_5',name:'Growing Set',target:5,gp:1},{id:'mt_icon_15',name:'Collector',target:15,gp:1},{id:'mt_icon_30',name:'Curator',target:30,gp:2},{id:'mt_icon_50',name:'Archivist',target:50,gp:2},{id:'mt_icon_80',name:'Master Collector',target:80,gp:3},{id:'mt_icon_129',name:'Complete Set',target:154,gp:5}]},
   {id:'immortals',name:'IMMORTALS',val:s=>(s.immortals||[]).length,unit:'immortals',
    tiers:[{id:'mt_imm_1',name:'First Champion',target:1,gp:2},{id:'mt_imm_3',name:'Elite Guard',target:3,gp:3},{id:'mt_imm_5',name:'Immortal Legion',target:5,gp:4}]},
   {id:'pve',name:'PVE CAMPAIGN',val:s=>(s.pveCompleted||[]).length,unit:'stages cleared',
@@ -327,7 +330,7 @@ function defaultState(){
     diamondBuffer:0,lastArchivistGen:1,totalResearchDiamondsEarned:0,
     totalVaultOpens:0,ownedIcons:[],selectedIcon:null,
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
-    vault_predator_opens:0,vault_ancient_opens:0,
+    vault_predator_opens:0,vault_ancient_opens:0,vault_machine_opens:0,
     immortals:[],combatSlots:1,pveCompleted:[],pvpWins:0,pvpLosses:0,combatLog:[],
     research:{labInterns:0,geneAnalysts:0,lineageArchivists:0,headOfResearch:false,automatedSequencer:false},
     upgrades:{popCap:0,mutation:0,traitAmp:0,breedYield:0,cullValue:0,selective:0,cullInsight:0,lineageMem:0,hybridVigor:0,adaptiveGenetics:0,autoBreeder:0,traitCapBoost:0,eliteMutation:0,deepArchive:0},
@@ -388,7 +391,7 @@ function sanitiseState(s){
     ownedIcons:Array.isArray(s.ownedIcons)?s.ownedIcons:[],selectedIcon:s.selectedIcon||null,
     vault_aquatic_opens:safeNum(s.vault_aquatic_opens),vault_flora_opens:safeNum(s.vault_flora_opens),
     vault_cosmos_opens:safeNum(s.vault_cosmos_opens),vault_predator_opens:safeNum(s.vault_predator_opens),
-    vault_ancient_opens:safeNum(s.vault_ancient_opens),
+    vault_ancient_opens:safeNum(s.vault_ancient_opens),vault_machine_opens:safeNum(s.vault_machine_opens),
     completedMilestones:Array.isArray(s.completedMilestones)?s.completedMilestones:[],
     milestoneDiamondsAwarded:Array.isArray(s.milestoneDiamondsAwarded)?s.milestoneDiamondsAwarded:[],
     immortals:Array.isArray(s.immortals)?s.immortals:[],
