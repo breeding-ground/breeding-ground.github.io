@@ -8,27 +8,27 @@
 </head>
 <body>
 
-  <!-- AUTH SCREEN -->
+  <!-- ── AUTH SCREEN ───────────────────────────────────── -->
   <div id="auth-screen">
     <div id="auth-box">
       <h1>🧬 BREEDING GROUND</h1>
       <p class="tagline">Select. Breed. Evolve.</p>
 
       <div id="auth-tabs">
-        <button class="tab-btn active" onclick="showTab('login')">Login</button>
-        <button class="tab-btn" onclick="showTab('register')">Register</button>
+        <button class="auth-tab active" onclick="showTab('login')">Login</button>
+        <button class="auth-tab"        onclick="showTab('register')">Register</button>
       </div>
 
       <div id="login-form">
-        <input type="email" id="login-email" placeholder="email" />
+        <input type="email"    id="login-email"    placeholder="email" />
         <input type="password" id="login-password" placeholder="password" />
         <button onclick="login()">[ LOGIN ]</button>
       </div>
 
       <div id="register-form" class="hidden">
-        <input type="email" id="reg-email" placeholder="email" />
+        <input type="email"    id="reg-email"    placeholder="email" />
         <input type="password" id="reg-password" placeholder="password (min 6 chars)" />
-        <input type="password" id="reg-confirm" placeholder="confirm password" />
+        <input type="password" id="reg-confirm"  placeholder="confirm password" />
         <button onclick="register()">[ CREATE ACCOUNT ]</button>
       </div>
 
@@ -36,26 +36,55 @@
     </div>
   </div>
 
-  <!-- GAME SCREEN -->
+  <!-- ── GAME SCREEN ────────────────────────────────────── -->
   <div id="game-screen" class="hidden">
+
     <header>
       <span id="header-title">🧬 BREEDING GROUND</span>
       <span id="header-user"></span>
+      <span id="autosave-flash"></span>
       <button id="logout-btn" onclick="logout()">[ logout ]</button>
     </header>
 
     <div id="game-container">
-      <div id="log-panel">
-        <h2>// LOG</h2>
-        <div id="log-output"></div>
+
+      <!-- LEFT: tabbed content area -->
+      <div id="content-area">
+        <div id="tab-bar">
+          <button class="tab-btn active" id="tab-log"          onclick="switchTab('log')">LOG</button>
+          <button class="tab-btn"        id="tab-population"   onclick="switchTab('population')">POPULATION</button>
+          <button class="tab-btn"        id="tab-quests"       onclick="switchTab('quests')">QUESTS</button>
+          <button class="tab-btn"        id="tab-achievements" onclick="switchTab('achievements')">ACHIEVEMENTS</button>
+        </div>
+
+        <div id="panel-log" class="panel">
+          <div id="log-output"></div>
+        </div>
+
+        <div id="panel-population" class="panel hidden">
+          <div id="population-table"></div>
+        </div>
+
+        <div id="panel-quests" class="panel hidden">
+          <div id="quests-container"></div>
+        </div>
+
+        <div id="panel-achievements" class="panel hidden">
+          <div id="achievements-container"></div>
+        </div>
       </div>
 
+      <!-- RIGHT: always-visible sidebar -->
       <div id="stats-panel">
-        <h2>// POPULATION</h2>
+
+        <h2>// STATS</h2>
         <div id="stats-output">
-          <p>Generation: <span id="stat-gen">1</span></p>
-          <p>Population: <span id="stat-pop">0</span></p>
-          <p>Best Fitness: <span id="stat-fitness">—</span></p>
+          <div class="stat-row"><span class="stat-label">Generation</span> <span id="stat-gen">1</span></div>
+          <div class="stat-row"><span class="stat-label">Population</span> <span id="stat-pop">0 / 20</span></div>
+          <div class="stat-row"><span class="stat-label">Gold</span>       <span id="stat-gold" class="gold">0</span></div>
+          <div class="stat-row"><span class="stat-label">Best Fitness</span><span id="stat-fitness">—</span></div>
+          <div class="stat-row"><span class="stat-label">Total Bred</span> <span id="stat-bred">0</span></div>
+          <div class="stat-row"><span class="stat-label">Culled</span>     <span id="stat-culled">0</span></div>
         </div>
 
         <h2>// ACTIONS</h2>
@@ -64,19 +93,21 @@
           <button onclick="cullWeakest()">[ CULL WEAKEST ]</button>
         </div>
 
+        <h2>// UPGRADES</h2>
+        <div id="upgrades-list"></div>
+
         <h2>// SAVE</h2>
         <div id="save-controls">
-          <button onclick="saveGame()">[ SAVE TO CLOUD ]</button>
+          <button onclick="saveGame()">[ SAVE NOW ]</button>
           <p id="save-status" class="message"></p>
+          <p class="note">Autosaves every 20 min</p>
         </div>
+
       </div>
     </div>
   </div>
 
-  <!-- Game logic (loaded before auth so auth.js can call its functions) -->
   <script src="game.js"></script>
-  <!-- Firebase Auth + Firestore -->
   <script type="module" src="auth.js"></script>
-
 </body>
 </html>
