@@ -1,6 +1,82 @@
 <!DOCTYPE html>
-<html>
-  <body>
-    <p>it works</p>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Breeding Ground</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- AUTH SCREEN -->
+  <div id="auth-screen">
+    <div id="auth-box">
+      <h1>🧬 BREEDING GROUND</h1>
+      <p class="tagline">Select. Breed. Evolve.</p>
+
+      <div id="auth-tabs">
+        <button class="tab-btn active" onclick="showTab('login')">Login</button>
+        <button class="tab-btn" onclick="showTab('register')">Register</button>
+      </div>
+
+      <div id="login-form">
+        <input type="email" id="login-email" placeholder="email" />
+        <input type="password" id="login-password" placeholder="password" />
+        <button onclick="login()">[ LOGIN ]</button>
+      </div>
+
+      <div id="register-form" class="hidden">
+        <input type="email" id="reg-email" placeholder="email" />
+        <input type="password" id="reg-password" placeholder="password (min 6 chars)" />
+        <input type="password" id="reg-confirm" placeholder="confirm password" />
+        <button onclick="register()">[ CREATE ACCOUNT ]</button>
+      </div>
+
+      <p id="auth-message" class="message"></p>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="hidden">
+    <header>
+      <span id="header-title">🧬 BREEDING GROUND</span>
+      <span id="header-user"></span>
+      <button id="logout-btn" onclick="logout()">[ logout ]</button>
+    </header>
+
+    <div id="game-container">
+      <div id="log-panel">
+        <h2>// LOG</h2>
+        <div id="log-output"></div>
+      </div>
+
+      <div id="stats-panel">
+        <h2>// POPULATION</h2>
+        <div id="stats-output">
+          <p>Generation: <span id="stat-gen">1</span></p>
+          <p>Population: <span id="stat-pop">0</span></p>
+          <p>Best Fitness: <span id="stat-fitness">—</span></p>
+        </div>
+
+        <h2>// ACTIONS</h2>
+        <div id="actions">
+          <button onclick="breedCycle()">[ BREED ]</button>
+          <button onclick="cullWeakest()">[ CULL WEAKEST ]</button>
+        </div>
+
+        <h2>// SAVE</h2>
+        <div id="save-controls">
+          <button onclick="saveGame()">[ SAVE TO CLOUD ]</button>
+          <p id="save-status" class="message"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game logic (loaded before auth so auth.js can call its functions) -->
+  <script src="game.js"></script>
+  <!-- Firebase Auth + Firestore -->
+  <script type="module" src="auth.js"></script>
+
+</body>
 </html>
