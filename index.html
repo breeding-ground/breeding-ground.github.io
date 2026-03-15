@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <!-- ── AUTH SCREEN ───────────────────────────────────── -->
+  <!-- ── AUTH SCREEN ───────────────────────────────────────── -->
   <div id="auth-screen">
     <div id="auth-box">
       <h1>🧬 BREEDING GROUND</h1>
@@ -36,11 +36,26 @@
     </div>
   </div>
 
-  <!-- ── GAME SCREEN ────────────────────────────────────── -->
+  <!-- ── USERNAME MODAL ────────────────────────────────────── -->
+  <div id="username-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2 style="margin-top:0">// SET USERNAME</h2>
+      <p class="modal-desc">This will appear on the leaderboard. You can change it later.</p>
+      <input type="text" id="username-input" placeholder="choose a username" maxlength="20" />
+      <p id="username-message" class="message"></p>
+      <div class="modal-btns">
+        <button onclick="saveUsername()">[ CONFIRM ]</button>
+        <button class="btn-secondary" onclick="skipUsername()">[ SKIP FOR NOW ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GAME SCREEN ────────────────────────────────────────── -->
   <div id="game-screen" class="hidden">
 
     <header>
       <span id="header-title">🧬 BREEDING GROUND</span>
+      <span id="header-username" class="header-username" onclick="openUsernameModal()" title="Change username">—</span>
       <span id="header-user"></span>
       <span id="autosave-flash"></span>
       <button id="logout-btn" onclick="logout()">[ logout ]</button>
@@ -55,6 +70,7 @@
           <button class="tab-btn"        id="tab-population"   onclick="switchTab('population')">POPULATION</button>
           <button class="tab-btn"        id="tab-quests"       onclick="switchTab('quests')">QUESTS</button>
           <button class="tab-btn"        id="tab-achievements" onclick="switchTab('achievements')">ACHIEVEMENTS</button>
+          <button class="tab-btn"        id="tab-leaderboard"  onclick="switchTab('leaderboard')">LEADERBOARD</button>
         </div>
 
         <div id="panel-log" class="panel">
@@ -72,6 +88,10 @@
         <div id="panel-achievements" class="panel hidden">
           <div id="achievements-container"></div>
         </div>
+
+        <div id="panel-leaderboard" class="panel hidden">
+          <div id="leaderboard-container"></div>
+        </div>
       </div>
 
       <!-- RIGHT: always-visible sidebar -->
@@ -79,12 +99,13 @@
 
         <h2>// STATS</h2>
         <div id="stats-output">
-          <div class="stat-row"><span class="stat-label">Generation</span> <span id="stat-gen">1</span></div>
-          <div class="stat-row"><span class="stat-label">Population</span> <span id="stat-pop">0 / 20</span></div>
-          <div class="stat-row"><span class="stat-label">Gold</span>       <span id="stat-gold" class="gold">0</span></div>
+          <div class="stat-row"><span class="stat-label">Generation</span>  <span id="stat-gen">1</span></div>
+          <div class="stat-row"><span class="stat-label">Population</span>  <span id="stat-pop">0 / 20</span></div>
+          <div class="stat-row"><span class="stat-label">Gold</span>        <span id="stat-gold" class="gold">0</span></div>
           <div class="stat-row"><span class="stat-label">Best Fitness</span><span id="stat-fitness">—</span></div>
-          <div class="stat-row"><span class="stat-label">Total Bred</span> <span id="stat-bred">0</span></div>
-          <div class="stat-row"><span class="stat-label">Culled</span>     <span id="stat-culled">0</span></div>
+          <div class="stat-row"><span class="stat-label">Score</span>       <span id="stat-score" class="score-val">0</span></div>
+          <div class="stat-row"><span class="stat-label">Total Bred</span>  <span id="stat-bred">0</span></div>
+          <div class="stat-row"><span class="stat-label">Culled</span>      <span id="stat-culled">0</span></div>
         </div>
 
         <h2>// ACTIONS</h2>
