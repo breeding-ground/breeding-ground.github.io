@@ -60,8 +60,7 @@ window.showTab = (tab) => {
 
 function setAuthMsg(msg, type = "") {
   const el = document.getElementById("auth-message");
-  el.textContent = msg;
-  el.className   = "message" + (type ? ` ${type}` : "");
+  el.textContent = msg; el.className = "message" + (type ? ` ${type}` : "");
 }
 
 window.register = async () => {
@@ -87,13 +86,8 @@ window.logout = async () => { await saveGame(); await signOut(auth); };
 
 async function loadUsername() {
   if (!currentUser) return null;
-  try { const s = await getDoc(doc(db,"users",currentUser.uid)); return s.exists()?s.data().username||null:null; }
+  try { const s=await getDoc(doc(db,"users",currentUser.uid)); return s.exists()?s.data().username||null:null; }
   catch { return null; }
-}
-
-async function persistUsername(username) {
-  if (!currentUser) return;
-  await setDoc(doc(db,"users",currentUser.uid),{username},{merge:true});
 }
 
 function setHeaderUsername(username) {
@@ -106,13 +100,14 @@ window.saveUsername = async () => {
   const input = document.getElementById("username-input");
   const msgEl = document.getElementById("username-message");
   const raw   = (input?.value||"").trim();
-  if (!raw)            { msgEl.textContent="Enter a username.";             msgEl.className="message error"; return; }
-  if (raw.length<2)    { msgEl.textContent="At least 2 characters.";       msgEl.className="message error"; return; }
-  if (raw.length>20)   { msgEl.textContent="Max 20 characters.";           msgEl.className="message error"; return; }
+  if (!raw)          { msgEl.textContent="Enter a username.";             msgEl.className="message error"; return; }
+  if (raw.length<2)  { msgEl.textContent="At least 2 characters.";       msgEl.className="message error"; return; }
+  if (raw.length>20) { msgEl.textContent="Max 20 characters.";           msgEl.className="message error"; return; }
   if (!/^[a-zA-Z0-9_\- ]+$/.test(raw)) { msgEl.textContent="Letters, numbers, spaces, _ and - only."; msgEl.className="message error"; return; }
   msgEl.textContent="Saving…"; msgEl.className="message";
   try {
-    await persistUsername(raw); setHeaderUsername(raw);
+    await setDoc(doc(db,"users",currentUser.uid),{username:raw},{merge:true});
+    setHeaderUsername(raw);
     if (window.notifyUsernameSet) window.notifyUsernameSet();
     await saveGame();
     msgEl.textContent="Saved!"; msgEl.className="message success";
@@ -130,10 +125,13 @@ window.saveGame = async () => {
       setDoc(doc(db,"saves",currentUser.uid),{...data,savedAt:new Date().toISOString()}),
       setDoc(doc(db,"leaderboard",currentUser.uid),{
         uid:currentUser.uid, username, score,
-        highestFitness:data.highestFitness||0, generation:data.generation||1,
-        totalBred:data.totalBred||0, totalCulled:data.totalCulled||0,
-        totalDiamondsEarned:data.totalDiamondsEarned||0,
-        updatedAt:new Date().toISOString(),
+        selectedIcon:    data.selectedIcon     || null,
+        highestFitness:  data.highestFitness   || 0,
+        generation:      data.generation       || 1,
+        totalBred:       data.totalBred        || 0,
+        totalCulled:     data.totalCulled      || 0,
+        totalDiamondsEarned: data.totalDiamondsEarned || 0,
+        updatedAt: new Date().toISOString(),
       }),
     ]);
     if (statusEl) { statusEl.textContent="Saved ✓"; statusEl.className="message success"; setTimeout(()=>{if(statusEl)statusEl.textContent="";},3000); }
@@ -166,7 +164,7 @@ window.refreshLeaderboard = async () => {
 };
 
 function friendlyErr(code) {
-  const map = {
+  const map={
     "auth/email-already-in-use":"That email is already registered.",
     "auth/invalid-email":"Invalid email address.",
     "auth/weak-password":"Password is too weak.",
