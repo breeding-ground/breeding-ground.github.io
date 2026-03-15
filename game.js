@@ -257,6 +257,13 @@ function sanitiseState(s){
   };
 }
 
+function migrateCrature(c){
+  if(!c||typeof c!=='object') return null;
+  const t=c.traits||{};
+  return { id:c.id||Math.random().toString(36).slice(2,8).toUpperCase(), generation:safeNum(c.generation,1),
+    traits:{ speed:safeNum(t.speed,rand(1,8)), strength:safeNum(t.strength,rand(1,8)), stamina:safeNum(t.stamina,rand(1,8)), intelligence:safeNum(t.intelligence,rand(1,8)), resilience:safeNum(t.resilience,rand(1,8)) }};
+}
+
 function rebuildBestEverTraits(){
   TRAIT_KEYS.forEach(t=>{bestEverTraits[t]=1;});
   state.population.forEach(c=>TRAIT_KEYS.forEach(t=>{ const v=safeNum(c.traits[t]); if(v>bestEverTraits[t]) bestEverTraits[t]=v; }));
