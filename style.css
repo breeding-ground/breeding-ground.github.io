@@ -16,6 +16,8 @@
   --diamond:  #67e8f9;
   --dimblu:   #164e63;
   --secret:   #a78bfa;
+  --gp:       #86efac;
+  --combat:   #fb923c;
   --font:     'Courier New', Courier, monospace;
 }
 
@@ -43,8 +45,18 @@ button:active { opacity:0.75; }
 .btn-diamond:not(.cant-afford):hover { background:var(--diamond); color:var(--bg); animation:none; }
 .btn-diamond.cant-afford { opacity:0.3; cursor:not-allowed; animation:none; }
 @keyframes diamondPulse {
-  0%,100% { box-shadow:0 0 3px rgba(103,232,249,0.25); border-color:var(--diamond); }
+  0%,100% { box-shadow:0 0 3px rgba(103,232,249,0.25); }
   50%      { box-shadow:0 0 10px rgba(103,232,249,0.65),0 0 20px rgba(103,232,249,0.15); border-color:#a5f3fc; }
+}
+
+/* ── GP BUTTON ─────────────────────────────────────────────── */
+.btn-gp { border-color:var(--gp); color:var(--gp); }
+.btn-gp:not(.cant-afford) { animation:gpPulse 2.5s ease-in-out infinite; }
+.btn-gp:not(.cant-afford):hover { background:var(--gp); color:var(--bg); animation:none; }
+.btn-gp.cant-afford { opacity:0.3; cursor:not-allowed; animation:none; }
+@keyframes gpPulse {
+  0%,100% { box-shadow:0 0 3px rgba(134,239,172,0.2); }
+  50%      { box-shadow:0 0 10px rgba(134,239,172,0.55),0 0 18px rgba(134,239,172,0.1); border-color:#bbf7d0; }
 }
 
 .message { font-size:11px; margin-top:10px; min-height:16px; text-align:center; color:var(--muted); }
@@ -53,7 +65,7 @@ button:active { opacity:0.75; }
 
 /* ── MODAL ─────────────────────────────────────────────────── */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
-.modal-box { background:var(--surface); border:1px solid var(--green); padding:32px; width:100%; max-width:360px; }
+.modal-box { background:var(--surface); border:1px solid var(--green); padding:32px; width:100%; max-width:400px; }
 .modal-desc { color:var(--muted); font-size:12px; line-height:1.6; margin-bottom:20px; margin-top:10px; }
 .modal-btns { display:flex; flex-direction:column; gap:6px; margin-top:4px; }
 
@@ -75,6 +87,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); displ
 .tab-btn { background:none; border:none; border-bottom:2px solid transparent; color:var(--muted); cursor:pointer; font-family:var(--font); font-size:11px; letter-spacing:2px; padding:10px 14px; margin-bottom:-1px; white-space:nowrap; width:auto; }
 .tab-btn:hover  { color:var(--text); background:none; }
 .tab-btn.active { color:var(--green); border-bottom-color:var(--green); background:none; }
+.tab-btn.has-badge::after { content:' ●'; color:var(--combat); font-size:9px; }
 
 /* ── PANELS ─────────────────────────────────────────────────── */
 #content-area { flex:1; display:flex; flex-direction:column; overflow:hidden; }
@@ -85,6 +98,8 @@ header { background:var(--surface); border-bottom:1px solid var(--border); displ
 .log-entry.highlight { border-left-color:var(--green);   color:var(--text); }
 .log-entry.warn      { border-left-color:var(--red);     color:var(--red); }
 .log-entry.diamond   { border-left-color:var(--diamond); color:var(--diamond); }
+.log-entry.combat    { border-left-color:var(--combat);  color:var(--combat); }
+.log-entry.gp        { border-left-color:var(--gp);      color:var(--gp); }
 
 /* ── UPGRADES ──────────────────────────────────────────────── */
 .upgrades-section-title { font-size:10px; letter-spacing:3px; margin:0 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
@@ -132,6 +147,98 @@ header { background:var(--surface); border-bottom:1px solid var(--border); displ
 .research-card button { font-size:11px; padding:7px 12px; margin-top:0; }
 .research-maxed-label  { color:var(--dimblu); font-size:11px; letter-spacing:1px; }
 .research-active-label { color:var(--score); font-size:11px; letter-spacing:1px; }
+
+/* ── IMMORTALS (in population tab) ────────────────────────── */
+#immortals-section { margin-top:28px; }
+.immortals-title { font-size:10px; letter-spacing:3px; color:var(--combat); margin-bottom:14px; padding-bottom:6px; border-bottom:1px solid #2a1a0a; }
+.immortal-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; }
+.immortal-card {
+  border:1px solid var(--combat); background:#0f0a06; padding:14px 16px;
+}
+.im-header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+.im-name   { color:var(--combat); font-size:14px; letter-spacing:1px; }
+.im-record { color:var(--muted); font-size:11px; }
+.im-stats  { display:flex; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+.im-stat   { font-size:11px; color:var(--muted); }
+.im-stat span { color:var(--text); }
+.im-skills-title { font-size:10px; color:var(--gp); letter-spacing:2px; margin-bottom:8px; }
+.im-skill-branches { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
+.im-branch-title { font-size:9px; color:var(--muted); letter-spacing:1px; text-align:center; margin-bottom:4px; }
+.im-skill-node {
+  border:1px solid var(--border); padding:6px 8px; font-size:10px;
+  cursor:pointer; transition:border-color 0.15s;
+}
+.im-skill-node.unlocked { border-color:var(--gp); background:#080f08; color:var(--gp); cursor:default; }
+.im-skill-node.locked   { opacity:0.3; cursor:not-allowed; }
+.im-skill-node:not(.unlocked):not(.locked):hover { border-color:var(--gp); }
+.im-skill-name   { color:var(--text); font-size:10px; margin-bottom:2px; }
+.im-skill-effect { color:var(--muted); font-size:9px; }
+.im-skill-cost   { color:var(--gp); font-size:9px; margin-top:2px; }
+
+.immortalise-hint { color:var(--muted); font-size:11px; margin-top:16px; }
+.immortalise-btn  { width:auto; font-size:10px; padding:4px 10px; margin-top:4px; border-color:var(--combat); color:var(--combat); }
+.immortalise-btn:hover { background:var(--combat); color:var(--bg); }
+
+/* ── COMBAT TAB ─────────────────────────────────────────────── */
+.combat-locked { color:var(--muted); font-size:13px; line-height:1.8; padding:20px 0; border-left:2px solid var(--combat); padding-left:14px; }
+
+.combat-subtabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:20px; }
+.combat-stab {
+  background:none; border:none; border-bottom:2px solid transparent; color:var(--muted);
+  cursor:pointer; font-family:var(--font); font-size:11px; letter-spacing:2px; padding:8px 16px;
+  margin-bottom:-1px; width:auto; transition:color 0.15s;
+}
+.combat-stab.active { color:var(--combat); border-bottom-color:var(--combat); }
+.combat-stab:hover  { color:var(--text); background:none; }
+
+/* PvE */
+.pve-intro { color:var(--muted); font-size:12px; line-height:1.7; margin-bottom:20px; border-left:2px solid var(--combat); padding-left:12px; }
+.pve-stages-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; }
+.pve-stage-card { border:1px solid var(--border); background:var(--surface); padding:14px 16px; }
+.pve-stage-card.stage-complete { border-color:var(--dimgreen); background:#080f08; }
+.pve-stage-card.stage-locked   { opacity:0.4; }
+.pve-stage-name   { color:var(--text); font-size:13px; letter-spacing:1px; margin-bottom:4px; }
+.pve-stage-card.stage-complete .pve-stage-name { color:var(--green); }
+.pve-stage-desc   { color:var(--muted); font-size:11px; margin-bottom:8px; line-height:1.5; }
+.pve-stage-enemies { color:var(--muted); font-size:10px; margin-bottom:6px; }
+.pve-stage-reward { color:var(--gp); font-size:11px; margin-bottom:10px; }
+.pve-immortal-select { margin-bottom:8px; }
+.pve-immortal-select select { background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:11px; padding:5px 8px; width:100%; }
+.pve-fight-btn { font-size:11px; padding:7px 12px; margin-top:0; border-color:var(--combat); color:var(--combat); }
+.pve-fight-btn:hover { background:var(--combat); color:var(--bg); }
+.pve-complete-badge { color:var(--dimgreen); font-size:10px; letter-spacing:1px; }
+
+.combat-log-section { margin-top:24px; border:1px solid var(--border); padding:14px 16px; background:var(--surface); }
+.combat-log-title { color:var(--combat); font-size:10px; letter-spacing:3px; margin-bottom:10px; }
+.combat-log-line { font-size:11px; color:var(--muted); margin-bottom:3px; padding-left:8px; border-left:1px solid var(--border); }
+.combat-log-line.result-win  { color:var(--green); border-left-color:var(--green); }
+.combat-log-line.result-loss { color:var(--red);   border-left-color:var(--red); }
+
+/* PvP */
+.pvp-intro { color:var(--muted); font-size:12px; line-height:1.7; margin-bottom:20px; border-left:2px solid var(--score); padding-left:12px; }
+.pvp-section-title { font-size:10px; letter-spacing:3px; color:var(--score); margin:0 0 12px; padding-bottom:6px; border-bottom:1px solid #2a1a3a; }
+.pvp-challenge-card { border:1px solid #2a1a3a; background:var(--surface); padding:14px 16px; margin-bottom:8px; }
+.pvp-challenge-card.pvp-pending  { border-color:var(--combat); }
+.pvp-challenge-card.pvp-won      { border-color:var(--green); background:#080f08; }
+.pvp-challenge-card.pvp-lost     { border-color:var(--red);   background:#0f0808; }
+.pvp-ch-header  { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+.pvp-ch-name    { color:var(--text); font-size:13px; }
+.pvp-ch-status  { font-size:10px; letter-spacing:1px; }
+.pvp-ch-status.s-pending  { color:var(--combat); }
+.pvp-ch-status.s-won      { color:var(--green); }
+.pvp-ch-status.s-lost     { color:var(--red); }
+.pvp-ch-status.s-declined { color:var(--muted); }
+.pvp-ch-desc    { color:var(--muted); font-size:11px; margin-bottom:8px; }
+.pvp-ch-buttons { display:flex; gap:6px; }
+.pvp-ch-buttons button { width:auto; font-size:10px; padding:4px 10px; margin-top:0; }
+.pvp-empty { color:var(--muted); font-size:12px; font-style:italic; padding:12px 0; }
+
+/* Immortal selector in modals */
+.immortal-option { display:flex; align-items:center; gap:10px; border:1px solid var(--border); padding:10px 12px; margin-bottom:6px; cursor:pointer; }
+.immortal-option:hover { border-color:var(--combat); }
+.immortal-option.selected { border-color:var(--combat); background:#0f0a06; }
+.immortal-option-name   { color:var(--combat); font-size:13px; flex:1; }
+.immortal-option-stats  { color:var(--muted); font-size:10px; }
 
 /* ── MILESTONE TRACKS ──────────────────────────────────────── */
 .ms-total { font-size:11px; color:var(--muted); margin-bottom:20px; letter-spacing:1px; }
@@ -185,7 +292,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); displ
 .vault-active-label span { color:var(--score); font-size:16px; }
 .vault-collection-empty  { color:var(--muted); font-size:12px; font-style:italic; margin-top:8px; }
 .vault-icon-grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-.vault-icon-cell { width:44px; height:44px; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; border:1px solid var(--border); background:var(--surface); transition:border-color 0.15s, background 0.15s; user-select:none; }
+.vault-icon-cell { width:44px; height:44px; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; border:1px solid var(--border); background:var(--surface); user-select:none; }
 .vault-icon-cell:hover    { border-color:var(--score); background:var(--surface2); }
 .vault-icon-cell.selected { border-color:var(--score); background:#160d24; }
 .vault-boxes-title { font-size:10px; letter-spacing:3px; color:var(--diamond); margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--dimblu); }
@@ -204,13 +311,13 @@ header { background:var(--surface); border-bottom:1px solid var(--border); displ
 .vb-desc   { color:var(--muted); font-size:11px; line-height:1.6; margin-bottom:14px; }
 .vb-stats  { color:var(--muted); font-size:10px; margin-bottom:12px; }
 .vb-stats span { color:var(--text); }
-.vb-preview-toggle { background:none; border:1px solid var(--border); color:var(--muted); font-family:var(--font); font-size:11px; padding:5px 12px; cursor:pointer; width:auto; margin-top:0; transition:border-color 0.15s, color 0.15s; letter-spacing:1px; margin-bottom:10px; }
+.vb-preview-toggle { background:none; border:1px solid var(--border); color:var(--muted); font-family:var(--font); font-size:11px; padding:5px 12px; cursor:pointer; width:auto; margin-top:0; margin-bottom:10px; }
 .vb-preview-toggle:hover { border-color:var(--diamond); color:var(--diamond); background:none; }
 .vb-icons-preview { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; padding:10px; background:var(--bg); border:1px solid #1a1a2a; }
 .vb-icon-preview { font-size:20px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:1px solid transparent; }
 .vb-icon-preview.owned { background:#0a150a; border-color:var(--dimgreen); }
 
-/* ── POPULATION ─────────────────────────────────────────────── */
+/* ── POPULATION TABLE ────────────────────────────────────────── */
 .pop-header { display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
 .pop-hint   { color:var(--muted); font-size:11px; }
 .pop-breed-btn { width:auto; padding:6px 14px; margin:0; font-size:11px; }
@@ -253,6 +360,8 @@ tr.row-selected td       { background:#0d1f0d; }
 .lb-rank-3 .lb-score { color:#cd7f32; }
 .lb-empty   { color:var(--muted); font-size:12px; padding:16px 0; }
 .lb-loading { color:var(--muted); font-size:12px; padding:16px 0; font-style:italic; }
+.lb-fight-btn { background:none; border:1px solid var(--score); color:var(--score); font-family:var(--font); font-size:10px; padding:2px 6px; width:auto; margin:0; cursor:pointer; letter-spacing:0; }
+.lb-fight-btn:hover { background:var(--score); color:var(--bg); }
 
 /* ── SIDEBAR ─────────────────────────────────────────────────── */
 #stats-panel { width:210px; flex-shrink:0; border-left:1px solid var(--border); padding:14px 12px; overflow-y:auto; max-height:calc(100vh - 44px); background:var(--surface); }
@@ -262,6 +371,7 @@ h2:first-child { margin-top:0; }
 .stat-label  { color:var(--muted); }
 .gold      { color:var(--gold); }
 .diamond   { color:var(--diamond); }
+.gp        { color:var(--gp); }
 .score-val { color:var(--score); }
 #actions button { margin-bottom:6px; }
 .note { color:var(--muted); font-size:10px; margin-top:6px; }
