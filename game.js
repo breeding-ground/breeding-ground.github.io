@@ -275,6 +275,13 @@ function migrateLegacyProgress(){
   legacyIds.forEach(id=>{ if(allIds.has(id)&&!state.completedMilestones.includes(id)) state.completedMilestones.push(id); });
 }
 
+function getMilestoneCounts(){
+  const allIds=[...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)];
+  const done=allIds.filter(id=>(state.completedMilestones||[]).includes(id)).length;
+  return { done, total: allIds.length };
+}
+window.getMilestoneCounts = getMilestoneCounts;
+
 function flushDiamondBuffer(){
   while(state.diamondBuffer>=1){
     state.diamondBuffer-=1; state.diamonds+=1; state.totalDiamondsEarned+=1; state.totalResearchDiamondsEarned+=1;
@@ -771,7 +778,8 @@ window.renderLeaderboard=(entries,currentUid)=>{
   entries.forEach((e,i)=>{
     const rank=i+1,isYou=e.uid===currentUid;
     const nameDisplay=`${e.selectedIcon?e.selectedIcon+' ':''}${esc(e.username||'Anonymous')}${isYou?' ◄ you':''}`;
-    html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(safeNum(e.score))}</td><td>${fmt(safeNum(e.completedMilestones))}</td><td>${fmt(safeNum(e.generation))}</td></tr>`;
+    const msDisplay=e.milestoneTotal?`${fmt(safeNum(e.milestoneDone))}/${fmt(safeNum(e.milestoneTotal))}`:`${fmt(safeNum(e.milestoneDone)||safeNum(e.completedMilestones))}`;
+    html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(safeNum(e.score))}</td><td>${msDisplay}</td><td>${fmt(safeNum(e.generation))}</td></tr>`;
   });
   html+=`</tbody></table>`;c.innerHTML=html;
 };
