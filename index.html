@@ -45,6 +45,48 @@
     </div>
   </div>
 
+  <!-- Immortalise name modal -->
+  <div id="name-immortal-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2 style="margin-top:0">// NAME YOUR IMMORTAL</h2>
+      <p class="modal-desc">Give your champion a name. This will appear in combat.</p>
+      <input type="text" id="immortal-name-input" placeholder="enter a name" maxlength="24" />
+      <p id="immortal-name-message" class="message"></p>
+      <div class="modal-btns">
+        <button onclick="confirmImmortalName()">[ IMMORTALISE ]</button>
+        <button class="btn-secondary" onclick="cancelImmortalName()">[ CANCEL ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PvP Challenge modal -->
+  <div id="pvp-challenge-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2 style="margin-top:0">// SEND CHALLENGE</h2>
+      <p id="pvp-challenge-target" class="modal-desc"></p>
+      <div id="pvp-immortal-selector"></div>
+      <p id="pvp-challenge-message" class="message"></p>
+      <div class="modal-btns">
+        <button onclick="confirmPvpChallenge()">[ CHALLENGE ]</button>
+        <button class="btn-secondary" onclick="cancelPvpChallenge()">[ CANCEL ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PvP Accept modal -->
+  <div id="pvp-accept-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2 style="margin-top:0">// ACCEPT CHALLENGE</h2>
+      <p id="pvp-accept-target" class="modal-desc"></p>
+      <div id="pvp-accept-selector"></div>
+      <p id="pvp-accept-message" class="message"></p>
+      <div class="modal-btns">
+        <button onclick="confirmPvpAccept()">[ FIGHT ]</button>
+        <button class="btn-secondary" onclick="declinePvpChallenge()">[ DECLINE ]</button>
+      </div>
+    </div>
+  </div>
+
   <div id="game-screen" class="hidden">
     <header>
       <span id="header-title">🧬 BREEDING GROUND</span>
@@ -63,14 +105,16 @@
           <button class="tab-btn"        id="tab-research"    onclick="switchTab('research')">RESEARCH</button>
           <button class="tab-btn"        id="tab-milestones"  onclick="switchTab('milestones')">MILESTONES</button>
           <button class="tab-btn"        id="tab-vault"       onclick="switchTab('vault')">GENE VAULT</button>
+          <button class="tab-btn"        id="tab-combat"      onclick="switchTab('combat')">COMBAT</button>
           <button class="tab-btn"        id="tab-leaderboard" onclick="switchTab('leaderboard')">LEADERBOARD</button>
         </div>
         <div id="panel-log"         class="panel">        <div id="log-output"></div></div>
-        <div id="panel-population"  class="panel hidden"> <div id="population-table"></div></div>
+        <div id="panel-population"  class="panel hidden"> <div id="population-table"></div><div id="immortals-section"></div></div>
         <div id="panel-upgrades"    class="panel hidden"> <div id="upgrades-container"></div></div>
         <div id="panel-research"    class="panel hidden"> <div id="research-container"></div></div>
         <div id="panel-milestones"  class="panel hidden"> <div id="milestones-container"></div></div>
         <div id="panel-vault"       class="panel hidden"> <div id="vault-container"></div></div>
+        <div id="panel-combat"      class="panel hidden"> <div id="combat-container"></div></div>
         <div id="panel-leaderboard" class="panel hidden"> <div id="leaderboard-container"></div></div>
       </div>
 
@@ -79,10 +123,11 @@
         <div id="stats-output">
           <div class="stat-row"><span class="stat-label">Generation</span>  <span id="stat-gen">1</span></div>
           <div class="stat-row"><span class="stat-label">Population</span>  <span id="stat-pop">0</span></div>
-          <div class="stat-row"><span class="stat-label">Gold</span>        <span id="stat-gold"     class="gold">0</span></div>
-          <div class="stat-row"><span class="stat-label">Diamonds</span>    <span id="stat-diamonds" class="diamond">0 💎</span></div>
-          <div class="stat-row"><span class="stat-label">Milestones</span>   <span id="stat-milestones" class="score-val">0</span></div>
-          <div class="stat-row"><span class="stat-label">Score</span>        <span id="stat-score"      class="score-val">0</span></div>
+          <div class="stat-row"><span class="stat-label">Gold</span>        <span id="stat-gold"       class="gold">0</span></div>
+          <div class="stat-row"><span class="stat-label">Diamonds</span>    <span id="stat-diamonds"   class="diamond">0 💎</span></div>
+          <div class="stat-row"><span class="stat-label">Gene Points</span> <span id="stat-gp"         class="gp">0 🧪</span></div>
+          <div class="stat-row"><span class="stat-label">Milestones</span>  <span id="stat-milestones" class="score-val">0</span></div>
+          <div class="stat-row"><span class="stat-label">Score</span>       <span id="stat-score"      class="score-val">0</span></div>
           <div class="stat-row"><span class="stat-label">Total Bred</span>  <span id="stat-bred">0</span></div>
           <div class="stat-row"><span class="stat-label">Culled</span>      <span id="stat-culled">0</span></div>
         </div>
