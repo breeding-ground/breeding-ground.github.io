@@ -81,68 +81,6 @@ const RESEARCH_DEF = [
 ];
 
 // ═══════════════════════════════════════════════════════════
-//  SKILL TREE  (5 branches × 5 tiers, costs 1/3/8/25/75 GP)
-//  Each skill's requires: previous tier in same branch
-// ═══════════════════════════════════════════════════════════
-const SKILL_BRANCHES = [
-  {
-    id:'cull', name:'CULLING', color:'#ef4444',
-    skills:[
-      {id:'sk_c1', tier:1, name:'Sharp Eye',           cost:1,  effect:'Cull gold ×1.3',            desc:'Better yield from each culled specimen.'},
-      {id:'sk_c2', tier:2, name:'Methodical Cull',     cost:3,  effect:'Cull gold ×1.7 (total)',     desc:'Developed technique extracts more value.'},
-      {id:'sk_c3', tier:3, name:'Mass Purge Protocol', cost:8,  effect:'+1 to cull count',           desc:'Process more specimens per action.'},
-      {id:'sk_c4', tier:4, name:'The Reaper',          cost:25, effect:'Cull gold ×2.5 (total)',     desc:'Peak efficiency — nothing wasted.'},
-      {id:'sk_c5', tier:5, name:'Extinction Engine',   cost:75, effect:'+2 cull count (total +3)',   desc:'Industrial-scale culling apparatus.'},
-    ]
-  },
-  {
-    id:'breed', name:'BREEDING', color:'#22d3ee',
-    skills:[
-      {id:'sk_b1', tier:1, name:'Golden Offspring',  cost:1,  effect:'Breed gold ×1.5',            desc:'Each birth is more financially productive.'},
-      {id:'sk_b2', tier:2, name:'Prolific Lines',    cost:3,  effect:'Breed gold ×2.0 (total)',    desc:'High-output genetic pipelines.'},
-      {id:'sk_b3', tier:3, name:'Industrial Breed',  cost:8,  effect:'Breed gold ×3.0 (total)',    desc:'Scale, scale, scale.'},
-      {id:'sk_b4', tier:4, name:'Infinite Yield',    cost:25, effect:'Breed gold ×5.0 (total)',    desc:'Every generation produces maximum value.'},
-      {id:'sk_b5', tier:5, name:'Eternal Cycle',     cost:75, effect:'2% chance to breed twins',   desc:'Occasionally produces two offspring per action.'},
-    ]
-  },
-  {
-    id:'gene', name:'GENETICS', color:'#a78bfa',
-    skills:[
-      {id:'sk_g1', tier:1, name:'Guided Mutation',      cost:1,  effect:'+8% effective mutation rate', desc:'Steer randomness toward improvement.'},
-      {id:'sk_g2', tier:2, name:'Directed Evolution',   cost:3,  effect:'15% chance: top trait gets +2 after inherit', desc:'Occasionally amplifies the best gene.'},
-      {id:'sk_g3', tier:3, name:'Perfect Inheritance',  cost:8,  effect:'Lowest inherited trait nudged +1 always', desc:'Floor your worst outcomes.'},
-      {id:'sk_g4', tier:4, name:'Supreme Bloodline',    cost:25, effect:'All inherited traits ≥ lower parent value', desc:'Nothing below the minimum parent.'},
-      {id:'sk_g5', tier:5, name:'Transcendent Sequence',cost:75, effect:'8% per trait: recall all-time best at birth', desc:'Ancient memory woven into every birth.'},
-    ]
-  },
-  {
-    id:'res', name:'RESEARCH', color:'#67e8f9',
-    skills:[
-      {id:'sk_r1', tier:1, name:'Lab Efficiency',   cost:1,  effect:'Research yield ×1.25',       desc:'Better protocols, more output per event.'},
-      {id:'sk_r2', tier:2, name:'Deep Research',    cost:3,  effect:'Research yield ×1.6 (total)',desc:'Deeper analysis extracts more data.'},
-      {id:'sk_r3', tier:3, name:'Diamond Protocol', cost:8,  effect:'Research yield ×2.0 (total)',desc:'Optimised extraction pipeline.'},
-      {id:'sk_r4', tier:4, name:'Grand Synthesis',  cost:25, effect:'Research yield ×3.0 (total)',desc:'Maximum throughput achieved.'},
-      {id:'sk_r5', tier:5, name:'Infinite Knowledge',cost:75, effect:'+1 💎 per 25 breeds (flat)', desc:'Continuous diamond synthesis from breeding data.'},
-    ]
-  },
-  {
-    id:'lin', name:'LINEAGE', color:'#86efac',
-    skills:[
-      {id:'sk_l1', tier:1, name:'Ancestral Echo',       cost:1,  effect:'Starters 10% stronger baseline', desc:'Heritage bleeds into new stock.'},
-      {id:'sk_l2', tier:2, name:'Deep Bloodline',       cost:3,  effect:'Starters 25% stronger baseline', desc:'Deep roots produce strong shoots.'},
-      {id:'sk_l3', tier:3, name:'Legacy Awakened',      cost:8,  effect:'+10% lineage memory base rate',  desc:'The past speaks louder.'},
-      {id:'sk_l4', tier:4, name:'Ancient Dynasty',      cost:25, effect:'+5 effective trait cap for inheritance', desc:'Genes can temporarily exceed the hard cap.'},
-      {id:'sk_l5', tier:5, name:'Primordial Ascension', cost:75, effect:'New starters always at 50% of all-time best', desc:'Legacy is now the floor, not the ceiling.'},
-    ]
-  },
-];
-
-// flat lookup
-const SKILL_BY_ID = {};
-SKILL_BRANCHES.forEach(b => b.skills.forEach(s => { SKILL_BY_ID[s.id] = {...s, branch:b.id}; }));
-function skillOn(id) { return (state.skillsUnlocked||[]).includes(id); }
-
-// ═══════════════════════════════════════════════════════════
 //  GENE VAULTS
 // ═══════════════════════════════════════════════════════════
 const GENE_VAULTS = [
@@ -195,10 +133,6 @@ const MILESTONE_TRACKS = [
     tiers:[{id:'m_first_researcher',name:'Research Initiative',target:1,diamonds:1},{id:'mt_res_3',name:'Growing Team',target:3,diamonds:1},{id:'mt_res_8',name:'Division',target:8,diamonds:2},{id:'mt_res_15',name:'Department',target:15,diamonds:3},{id:'mt_res_25',name:'Full Lab',target:25,diamonds:4},{id:'mt_res_37',name:'Complete Division',target:37,diamonds:6}]},
   { id:'icons',       name:'ICON COLLECTION',   val:s=>(s.ownedIcons||[]).length, unit:'icons collected',
     tiers:[{id:'mt_icon_1',name:'First Find',target:1,diamonds:0},{id:'mt_icon_5',name:'Growing Set',target:5,diamonds:1},{id:'mt_icon_15',name:'Collector',target:15,diamonds:2},{id:'mt_icon_30',name:'Curator',target:30,diamonds:3},{id:'mt_icon_50',name:'Archivist',target:50,diamonds:5},{id:'mt_icon_80',name:'Master Collector',target:80,diamonds:8},{id:'mt_icon_125',name:'Complete Set',target:125,diamonds:20}]},
-  { id:'genepoints',  name:'GENE POINTS',       val:s=>safeNum(s.totalGpEarned), unit:'gene points earned',
-    tiers:[{id:'mt_gp_1',name:'First Sample',target:1,diamonds:1},{id:'mt_gp_5',name:'Regular Earner',target:5,diamonds:1},{id:'mt_gp_12',name:'Dedicated',target:12,diamonds:2},{id:'mt_gp_25',name:'Deep Study',target:25,diamonds:3},{id:'mt_gp_50',name:'Research Veteran',target:50,diamonds:5},{id:'mt_gp_100',name:'Lifelong Scholar',target:100,diamonds:8}]},
-  { id:'skills',      name:'SKILL TREE',        val:s=>(s.skillsUnlocked||[]).length, unit:'skills unlocked',
-    tiers:[{id:'mt_sk_1',name:'First Skill',target:1,diamonds:1},{id:'mt_sk_5',name:'Branching Out',target:5,diamonds:2},{id:'mt_sk_10',name:'Half Tree',target:10,diamonds:3},{id:'mt_sk_20',name:'Full Tree',target:20,diamonds:5},{id:'mt_sk_25',name:'Mastered',target:25,diamonds:10}]},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -232,10 +166,6 @@ const SECRET_MILESTONES = [
   {id:'m_secret_last_resort',name:'Last Resort',            desc:'Cull when only 3 creatures remain.',                         check:s=>s.culledFromThree===true,      diamonds:2},
   {id:'m_secret_4_vaults',   name:'Vault Crawler',          desc:'Open at least one sample from every Gene Vault.',            check:s=>GENE_VAULTS.every(v=>safeNum(s[`vault_${v.id}_opens`])>=1), diamonds:3},
   {id:'m_secret_all_icons',  name:'Completionist',          desc:`Own all ${TOTAL_ICONS} icons across every Gene Vault.`,      check:s=>(s.ownedIcons||[]).length>=TOTAL_ICONS, diamonds:15},
-  {id:'m_secret_skill1',     name:'First Lesson',           desc:'Unlock your first skill tree node.',                         check:s=>(s.skillsUnlocked||[]).length>=1, diamonds:1},
-  {id:'m_secret_fulltree',   name:'The Full Tree',          desc:'Unlock every skill tree node.',                              check:s=>(s.skillsUnlocked||[]).length>=25, diamonds:10},
-  {id:'m_secret_125',        name:'The Absolute',           desc:'Achieve the maximum possible fitness of 125.',               check:s=>s.highestFitness>=125,         diamonds:20},
-  {id:'m_secret_30min',      name:'Patient Researcher',     desc:'Earn 6+ Gene Points (30 minutes of active play).',          check:s=>safeNum(s.totalGpEarned)>=6,   diamonds:2},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -245,14 +175,12 @@ let state = {};
 let currentTab          = 'log';
 let selectedForBreeding = [];
 let bestEverTraits      = {};
-let gpIntervalHandle    = null;
 
 function defaultState(){
   return {
     generation:1, population:[], gold:0, diamonds:0,
     totalBred:0, totalCulled:0, totalGoldEarned:0,
     totalDiamondsEarned:0, totalDiamondsSpent:0, highestFitness:0, maxPopEver:0,
-    genePoints:0, totalGpEarned:0, skillsUnlocked:[],
     completedMilestones:[], milestoneDiamondsAwarded:[],
     surgeBreedsRemaining:0, surgeUseCount:0,
     everBroke:false, culledOwnRecord:false,
@@ -273,58 +201,22 @@ function defaultState(){
 
 // ── derived helpers ──────────────────────────────────────────
 function getMaxPop()   { return POP_CAP_TABLE[safeNum(state.upgrades?.popCap)]??20; }
-function getBreedGold(){
-  const base=[1,3,6,12,25,50,100][safeNum(state.upgrades?.breedYield)]??1;
-  const mult=skillOn('sk_b1')?1.5:1 * (skillOn('sk_b2')?2.0:1) * (skillOn('sk_b3')?3.0:1) * (skillOn('sk_b4')?5.0:1);
-  // actually tier skills are cumulative within their own branch; use the highest tier active
-  const sk=[skillOn('sk_b4')?5.0:skillOn('sk_b3')?3.0:skillOn('sk_b2')?2.0:skillOn('sk_b1')?1.5:1.0];
-  return Math.round(base * sk[0]);
-}
+function getBreedGold(){ return [1,3,6,12,25,50,100][safeNum(state.upgrades?.breedYield)]??1; }
 function getCullBonus(){
   const base=[0,3,7,15,30,60,120][safeNum(state.upgrades?.cullValue)]??0;
   return base; // additional multiplier applied in cullWeakest
 }
-function getCullMult(){
-  return skillOn('sk_c4')?2.5:skillOn('sk_c3')?1.7:skillOn('sk_c2')?1.7:skillOn('sk_c1')?1.3:1.0;
-}
-function getCullCount(){
-  const base=[1,2,3,5,8,12][safeNum(state.upgrades?.cullInsight)]??1;
-  const bonus=(skillOn('sk_c5')?2:0)+(skillOn('sk_c3')?1:0);
-  return base+bonus;
-}
-function getMutRate(){
-  const base=[0.15,0.25,0.40,0.60,1.0,1.0][safeNum(state.upgrades?.mutation)]??0.15;
-  return skillOn('sk_g1')?Math.min(1.0,base+0.08):base;
-}
+function getCullCount(){ return [1,2,3,5,8,12][safeNum(state.upgrades?.cullInsight)]??1; }
+function getMutRate(){ return [0.15,0.25,0.40,0.60,1.0,1.0][safeNum(state.upgrades?.mutation)]??0.15; }
 function getAmpRate()  { return [0,0.15,0.30,0.55,1.0,1.0][safeNum(state.upgrades?.traitAmp)]??0; }
 function getAmpBonus() { return safeNum(state.upgrades?.traitAmp)>=5; }
-function getMemRate()  {
-  const base=[0,0.05,0.12,0.25,0.40,0.60][safeNum(state.upgrades?.lineageMem)]??0;
-  return skillOn('sk_l3')?Math.min(0.95,base+0.10):base;
-}
+function getMemRate(){ return [0,0.05,0.12,0.25,0.40,0.60][safeNum(state.upgrades?.lineageMem)]??0; }
 function getMemBonus() { return [0,1,2][safeNum(state.upgrades?.deepArchive)]??0; }
-function getTraitCap() {
-  const apex=[0,5,10,20,35,55,75][safeNum(state.upgrades?.traitCapBoost)]??0;
-  const skillBonus=(skillOn('sk_l4')?5:0)+(skillOn('sk_l5')?0:0); // l4 adds 5 to inheritance cap
-  return TRAIT_MAX+apex+skillBonus;
-}
-function researchMult(){
-  const base=(state.research?.headOfResearch?1.5:1)*(state.research?.automatedSequencer?2:1);
-  const sk=skillOn('sk_r4')?3.0:skillOn('sk_r3')?2.0:skillOn('sk_r2')?1.6:skillOn('sk_r1')?1.25:1.0;
-  return base*sk;
-}
+function getTraitCap(){ const apex=[0,5,10,20,35,55,75][safeNum(state.upgrades?.traitCapBoost)]??0; return TRAIT_MAX+apex; }
+function researchMult(){ return (state.research?.headOfResearch?1.5:1)*(state.research?.automatedSequencer?2:1); }
 function researchBreedYield(){ return safeNum(state.research?.labInterns)*0.15*researchMult(); }
 function researchCullYield() { return safeNum(state.research?.geneAnalysts)*0.4*researchMult(); }
 function researchArchYield() { return safeNum(state.research?.lineageArchivists)*1.0*researchMult(); }
-// sk_r5: flat +1 💎 per 25 breeds
-function skillR5BreedBonus()  { return skillOn('sk_r5'); }
-
-function migrateCrature(c){
-  if(!c||typeof c!=='object') return null;
-  const t=c.traits||{};
-  return { id:c.id||Math.random().toString(36).slice(2,8).toUpperCase(), generation:safeNum(c.generation,1),
-    traits:{ speed:safeNum(t.speed,rand(1,8)), strength:safeNum(t.strength,rand(1,8)), stamina:safeNum(t.stamina,rand(1,8)), intelligence:safeNum(t.intelligence,rand(1,8)), resilience:safeNum(t.resilience,rand(1,8)) }};
-}
 
 function sanitiseState(s){
   return {
@@ -333,8 +225,6 @@ function sanitiseState(s){
     totalBred:safeNum(s.totalBred), totalCulled:safeNum(s.totalCulled),
     totalGoldEarned:safeNum(s.totalGoldEarned), totalDiamondsEarned:safeNum(s.totalDiamondsEarned),
     totalDiamondsSpent:safeNum(s.totalDiamondsSpent), highestFitness:safeNum(s.highestFitness), maxPopEver:safeNum(s.maxPopEver),
-    genePoints:safeNum(s.genePoints), totalGpEarned:safeNum(s.totalGpEarned),
-    skillsUnlocked:Array.isArray(s.skillsUnlocked)?s.skillsUnlocked:[],
     surgeBreedsRemaining:safeNum(s.surgeBreedsRemaining), surgeUseCount:safeNum(s.surgeUseCount),
     everBroke:!!s.everBroke, culledOwnRecord:!!s.culledOwnRecord,
     usedLegendaryStock:!!s.usedLegendaryStock, hasSetUsername:!!s.hasSetUsername,
@@ -393,20 +283,6 @@ function tickArchivists(){
   flushDiamondBuffer();
 }
 
-// ── GP timer ─────────────────────────────────────────────────
-function startGpTimer(){
-  if(gpIntervalHandle) clearInterval(gpIntervalHandle);
-  gpIntervalHandle=setInterval(()=>{
-    state.genePoints++; state.totalGpEarned++;
-    addLog('🧪 Gene Point awarded — 5 minutes of active research.','gp');
-    checkMilestones(); renderAll();
-    const el=document.getElementById('gp-flash');
-    if(el){ el.textContent='+1 🧪'; el.classList.add('visible'); setTimeout(()=>el.classList.remove('visible'),3000); }
-  }, 5*60*1000);
-}
-function stopGpTimer(){
-  if(gpIntervalHandle){ clearInterval(gpIntervalHandle); gpIntervalHandle=null; }
-}
 
 // ═══════════════════════════════════════════════════════════
 //  SAVE / LOAD
@@ -419,7 +295,6 @@ window.applySaveData = (data)=>{
   rebuildBestEverTraits();
   migrateLegacyProgress();
   checkMilestones();
-  startGpTimer();
   renderAll();
 };
 
@@ -427,7 +302,6 @@ window.initNewGame = ()=>{
   state=defaultState();
   state.population=Array.from({length:5},()=>makeCreature());
   rebuildBestEverTraits();
-  startGpTimer();
   renderAll();
 };
 
@@ -435,15 +309,14 @@ window.notifyUsernameSet = ()=>{
   if(!state.hasSetUsername){ state.hasSetUsername=true; checkMilestones(); renderAll(); }
 };
 
-window.stopGpTimer = stopGpTimer;
 
 // ═══════════════════════════════════════════════════════════
 //  SCORE
 // ═══════════════════════════════════════════════════════════
 window.calcScore = ()=>Math.floor(
-  safeNum(state.highestFitness)*200+safeNum(state.generation)*10+
+  (safeNum(state.highestFitness)*200+safeNum(state.generation)*10+
   safeNum(state.totalBred)*3+safeNum(state.totalCulled)*5+
-  safeNum(state.totalGoldEarned)+safeNum(state.totalDiamondsEarned)*100
+  safeNum(state.totalGoldEarned)+safeNum(state.totalDiamondsEarned)*100) / 10
 );
 
 // ═══════════════════════════════════════════════════════════
@@ -461,13 +334,11 @@ function inheritVal(va,vb,traitKey){
   const ampBase=(getAmpRate()>0&&Math.random()<getAmpRate())?Math.max(va,vb):(Math.random()<0.5?va:vb);
   const ampBonus=(getAmpBonus()&&Math.random()<0.1)?1:0;
 
-  const parentAvg=(va+vb)/2, parentFloor=Math.min(va,vb);
+  const parentAvg=(va+vb)/2;
   const agLvl=safeNum(state.upgrades?.adaptiveGenetics);
   const agRates=[0,0.2,0.45,0.70,1.0];
   let base=ampBase+ampBonus;
   if(agLvl>0&&base<parentAvg){ if(agLvl>=4||(Math.random()<(agRates[agLvl]||0))) base=Math.max(base,Math.floor(parentAvg)); }
-  // sk_g4: traits never below parent floor
-  if(skillOn('sk_g4')) base=Math.max(base,parentFloor);
 
   const alwaysPos=safeNum(state.upgrades?.mutation)>=4;
   const doubleMut=safeNum(state.upgrades?.mutation)>=5;
@@ -488,11 +359,6 @@ function inheritVal(va,vb,traitKey){
   };
   applyMut(); if(doubleMut) applyMut();
 
-  // sk_g2: 15% chance the top inherited trait gets +2
-  if(skillOn('sk_g2')&&Math.random()<0.15) val=Math.min(cap,val+2);
-  // sk_g3: lowest inherited trait always +1
-  if(skillOn('sk_g3')) val=Math.min(cap,val+1); // applied per-trait but only on lowest — check outside
-
   const hvLvl=safeNum(state.upgrades?.hybridVigor);
   if(hvLvl>0){
     const hvC=[0,0.10,0.22,0.35,0.50][hvLvl]||0;
@@ -506,28 +372,14 @@ function makeCreature(parentA=null,parentB=null){
   const traits={},cap=getTraitCap();
   if(parentA){
     TRAIT_KEYS.forEach(t=>{traits[t]=inheritVal(parentA.traits[t],parentB.traits[t],t);});
-    // sk_g3: ensure lowest trait gets +1
-    if(skillOn('sk_g3')){
-      const minT=TRAIT_KEYS.reduce((a,t)=>safeNum(traits[t])<safeNum(traits[a])?t:a,TRAIT_KEYS[0]);
-      traits[minT]=Math.min(cap,safeNum(traits[minT])+1);
-    }
-    // sk_g5: 8% per trait to recall all-time best
-    if(skillOn('sk_g5')){
-      TRAIT_KEYS.forEach(t=>{ if(Math.random()<0.08) traits[t]=Math.min(cap,safeNum(bestEverTraits[t],traits[t])); });
-    }
   } else {
     const geneRanges=[[1,8],[1,12],[4,16],[8,20],[10,25],[15,30]];
     const [gmin,gmax]=geneRanges[safeNum(state.upgrades?.genePool)]||[1,8];
     let lp=[0,0.25,0.50,0.75,0.90][safeNum(state.upgrades?.dynastyBlood)]||0;
-    // skill bonuses to starters
-    const linBonus=skillOn('sk_l2')?0.25:skillOn('sk_l1')?0.10:0;
-    const linFloor=skillOn('sk_l5')?0.50:0;
     TRAIT_KEYS.forEach(t=>{
       const rolled=rand(gmin,gmax);
-      const legacyBase=safeNum(bestEverTraits[t],1);
-      const legacy=lp>0?Math.round(legacyBase*(lp+linBonus)):0;
-      const skillFloor=linFloor>0?Math.round(legacyBase*linFloor):0;
-      traits[t]=Math.min(cap,Math.max(rolled,legacy,skillFloor));
+      const legacy=lp>0?Math.round(safeNum(bestEverTraits[t],1)*lp):0;
+      traits[t]=Math.min(cap,Math.max(rolled,legacy));
     });
   }
   return { id:Math.random().toString(36).slice(2,8).toUpperCase(), generation:state.generation, traits };
@@ -572,17 +424,8 @@ function _doBreed(pA,pB,targeted=false){
   // research yield
   const ry=researchBreedYield();
   if(ry>0){ state.diamondBuffer=safeNum(state.diamondBuffer)+ry; flushDiamondBuffer(); }
-  // sk_r5 flat breed bonus
-  if(skillR5BreedBonus()&&safeNum(state.totalBred)%25===0){ state.diamonds++; state.totalDiamondsEarned++; }
 
   tickArchivists(); checkEverBroke();
-
-  // sk_b5: 2% chance to produce twins
-  if(skillOn('sk_b5')&&Math.random()<0.02&&state.population.length<getMaxPop()){
-    const twin=makeCreature(pA,pB);
-    state.population.push(twin);
-    addLog(`🧬 Twin! ${twin.id} born alongside ${child.id}.`,'highlight');
-  }
 
   const ts2=TRAIT_ABR.map((a,i)=>`${a}:${child.traits[TRAIT_KEYS[i]]}`).join(' ');
   if(fitness>safeNum(state.highestFitness)){
@@ -607,7 +450,7 @@ window.cullWeakest=()=>{
   for(let i=0;i<actualCull;i++){
     const c=state.population.shift();
     const base=Math.max(1,2+Math.floor(safeNum(c._f)/2)+getCullBonus());
-    const earned=Math.round(base*getCullMult());
+    const earned=base;
     state.gold+=earned; state.totalGoldEarned+=earned; totalEarned+=earned; state.totalCulled++; names.push(`${c.id}(${c._f})`);
   }
   state.firstCullDone=true;
@@ -657,19 +500,6 @@ window.hireResearcher=(id)=>{
   checkMilestones(); renderAll();
 };
 
-window.buySkill=(id)=>{
-  const skill=SKILL_BY_ID[id]; if(!skill) return;
-  if(skillOn(id)) return addLog(`${skill.name} is already unlocked.`,'warn');
-  const branch=SKILL_BRANCHES.find(b=>b.id===skill.branch);
-  const tierIdx=branch.skills.findIndex(s=>s.id===id);
-  // requires previous tier in same branch
-  if(tierIdx>0&&!skillOn(branch.skills[tierIdx-1].id)) return addLog(`Requires previous tier in ${branch.name} branch first.`,'warn');
-  if(state.genePoints<skill.cost) return addLog(`Need ${skill.cost} 🧪 — you have ${fmt(state.genePoints)}.`,'warn');
-  state.genePoints-=skill.cost;
-  state.skillsUnlocked=[...state.skillsUnlocked, id];
-  addLog(`🧪 Skill unlocked: ${skill.name}.`,'gp');
-  checkMilestones(); renderAll();
-};
 
 window.toggleVaultPreview=(id)=>{ vaultPreviewId=vaultPreviewId===id?null:id; renderGeneVault(); };
 
@@ -749,19 +579,18 @@ function renderAll(){
   if(currentTab==='population') renderPopulation();
   if(currentTab==='upgrades')   renderUpgrades();
   if(currentTab==='research')   renderResearch();
-  if(currentTab==='skilltree')  renderSkillTree();
   if(currentTab==='milestones') renderMilestones();
   if(currentTab==='vault')      renderGeneVault();
 }
 
 function renderStats(){
-  const best=state.population.reduce((m,c)=>{const f=calcFitness(c);return f>m?f:m;},0);
+  const allIds=[...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)];
+  const done=allIds.filter(id=>state.completedMilestones.includes(id)).length;
   document.getElementById('stat-gen').textContent      = fmt(safeNum(state.generation,1));
   document.getElementById('stat-pop').textContent      = `${fmt(state.population.length)} / ${fmt(getMaxPop())}`;
   document.getElementById('stat-gold').textContent     = fmt(state.gold);
   document.getElementById('stat-diamonds').textContent = `${fmt(state.diamonds)} 💎`;
-  document.getElementById('stat-gp').textContent       = `${fmt(state.genePoints)} 🧪`;
-  document.getElementById('stat-fitness').textContent  = best?fmt(best):'—';
+  document.getElementById('stat-milestones').textContent = `${fmt(done)} / ${fmt(allIds.length)}`;
   document.getElementById('stat-score').textContent    = calcScore().toLocaleString();
   document.getElementById('stat-bred').textContent     = fmt(state.totalBred);
   document.getElementById('stat-culled').textContent   = fmt(state.totalCulled);
@@ -833,46 +662,6 @@ function renderResearch(){
   c.innerHTML=html;
 }
 
-function renderSkillTree(){
-  const c=document.getElementById('skilltree-container'); if(!c) return;
-  const unlocked=(state.skillsUnlocked||[]).length;
-  const total=SKILL_BRANCHES.reduce((n,b)=>n+b.skills.length,0);
-  let html=`<p class="st-intro">Gene Points are awarded every 5 minutes of active play. Spend them here to permanently enhance your breeding programme across five disciplines. Each branch must be unlocked tier by tier.</p>`;
-  html+=`<div class="st-header">
-    <span class="st-gp-display">🧪 ${fmt(state.genePoints)} Gene Points available</span>
-    <span class="st-total">${unlocked} / ${total} skills unlocked</span>
-  </div>`;
-  html+=`<div class="st-branches">`;
-  SKILL_BRANCHES.forEach(branch=>{
-    html+=`<div class="st-branch"><div class="st-branch-title" style="color:${branch.color}">${branch.name}</div>`;
-    branch.skills.forEach((skill,idx)=>{
-      const isUnlocked=skillOn(skill.id);
-      const prevUnlocked=idx===0||skillOn(branch.skills[idx-1].id);
-      const isAvailable=!isUnlocked&&prevUnlocked;
-      const nodeCls=isUnlocked?'sn-unlocked':isAvailable?'sn-available':'sn-locked';
-      const can=isAvailable&&state.genePoints>=skill.cost;
-      html+=`<div class="st-node ${nodeCls}">
-        <div class="st-tier-badge">${isUnlocked?'✓':''} T${skill.tier}</div>
-        <div class="st-node-name">${skill.name}</div>
-        <div class="st-node-desc">${skill.desc}</div>
-        <div class="st-node-effect">${skill.effect}</div>`;
-      if(isUnlocked){
-        html+=`<div class="st-unlocked-badge">ACTIVE</div>`;
-      } else if(isAvailable){
-        html+=`<button class="btn-gp ${can?'':'cant-afford'}" onclick="buySkill('${skill.id}')">[ UNLOCK — ${skill.cost} 🧪 ]</button>`;
-      } else {
-        html+=`<div style="color:var(--muted);font-size:10px">Requires previous tier</div>`;
-      }
-      html+=`</div>`;
-      if(idx<branch.skills.length-1){
-        html+=`<div class="st-connector ${isUnlocked?'conn-lit':''}">↓</div>`;
-      }
-    });
-    html+=`</div>`;
-  });
-  html+=`</div>`;
-  c.innerHTML=html;
-}
 
 function renderMilestones(){
   const c=document.getElementById('milestones-container'); if(!c) return;
@@ -969,7 +758,7 @@ function renderPopulation(){
 
 window.renderLeaderboard=(entries,currentUid)=>{
   const c=document.getElementById('leaderboard-container'); if(!c) return;
-  let html=`<div class="lb-header"><span class="lb-title">// LEADERBOARD</span><button class="lb-refresh" onclick="window.refreshLeaderboard&&window.refreshLeaderboard()">[ REFRESH ]</button></div><p class="lb-formula">Score = <span>fitness×200</span> + <span>gen×10</span> + <span>bred×3</span> + <span>culled×5</span> + <span>gold×1</span> + <span>💎×100</span></p>`;
+  let html=`<div class="lb-header"><span class="lb-title">// LEADERBOARD</span><button class="lb-refresh" onclick="window.refreshLeaderboard&&window.refreshLeaderboard()">[ REFRESH ]</button></div><p class="lb-formula">Score = (<span>fitness×200</span> + <span>gen×10</span> + <span>bred×3</span> + <span>culled×5</span> + <span>gold×1</span> + <span>💎×100</span>) ÷ 10</p>`;
   if(!entries?.length){html+=`<p class="lb-empty">No entries yet — save to appear here.</p>`;c.innerHTML=html;return;}
   html+=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>SCORE</th><th>FITNESS</th><th>GEN</th></tr></thead><tbody>`;
   entries.forEach((e,i)=>{
@@ -998,7 +787,6 @@ window.switchTab=(tab)=>{
   if(tab==='population') renderPopulation();
   if(tab==='upgrades')   renderUpgrades();
   if(tab==='research')   renderResearch();
-  if(tab==='skilltree')  renderSkillTree();
   if(tab==='milestones') renderMilestones();
   if(tab==='vault')      renderGeneVault();
   if(tab==='leaderboard') window.refreshLeaderboard&&window.refreshLeaderboard();
