@@ -50,7 +50,6 @@
       <span id="header-title">🧬 BREEDING GROUND</span>
       <span id="header-username" class="header-username" onclick="openUsernameModal()" title="Change username">—</span>
       <span id="header-user"></span>
-      <span id="gp-flash"></span>
       <span id="autosave-flash"></span>
       <button id="logout-btn" onclick="logout()">[ logout ]</button>
     </header>
@@ -62,7 +61,6 @@
           <button class="tab-btn"        id="tab-population"  onclick="switchTab('population')">POPULATION</button>
           <button class="tab-btn"        id="tab-upgrades"    onclick="switchTab('upgrades')">UPGRADES</button>
           <button class="tab-btn"        id="tab-research"    onclick="switchTab('research')">RESEARCH</button>
-          <button class="tab-btn"        id="tab-skilltree"   onclick="switchTab('skilltree')">SKILL TREE</button>
           <button class="tab-btn"        id="tab-milestones"  onclick="switchTab('milestones')">MILESTONES</button>
           <button class="tab-btn"        id="tab-vault"       onclick="switchTab('vault')">GENE VAULT</button>
           <button class="tab-btn"        id="tab-leaderboard" onclick="switchTab('leaderboard')">LEADERBOARD</button>
@@ -71,7 +69,6 @@
         <div id="panel-population"  class="panel hidden"> <div id="population-table"></div></div>
         <div id="panel-upgrades"    class="panel hidden"> <div id="upgrades-container"></div></div>
         <div id="panel-research"    class="panel hidden"> <div id="research-container"></div></div>
-        <div id="panel-skilltree"   class="panel hidden"> <div id="skilltree-container"></div></div>
         <div id="panel-milestones"  class="panel hidden"> <div id="milestones-container"></div></div>
         <div id="panel-vault"       class="panel hidden"> <div id="vault-container"></div></div>
         <div id="panel-leaderboard" class="panel hidden"> <div id="leaderboard-container"></div></div>
@@ -84,9 +81,8 @@
           <div class="stat-row"><span class="stat-label">Population</span>  <span id="stat-pop">0</span></div>
           <div class="stat-row"><span class="stat-label">Gold</span>        <span id="stat-gold"     class="gold">0</span></div>
           <div class="stat-row"><span class="stat-label">Diamonds</span>    <span id="stat-diamonds" class="diamond">0 💎</span></div>
-          <div class="stat-row"><span class="stat-label">Gene Points</span> <span id="stat-gp"       class="gp">0 🧪</span></div>
-          <div class="stat-row"><span class="stat-label">Best Fitness</span><span id="stat-fitness">—</span></div>
-          <div class="stat-row"><span class="stat-label">Score</span>       <span id="stat-score"    class="score-val">0</span></div>
+          <div class="stat-row"><span class="stat-label">Milestones</span>   <span id="stat-milestones" class="score-val">0</span></div>
+          <div class="stat-row"><span class="stat-label">Score</span>        <span id="stat-score"      class="score-val">0</span></div>
           <div class="stat-row"><span class="stat-label">Total Bred</span>  <span id="stat-bred">0</span></div>
           <div class="stat-row"><span class="stat-label">Culled</span>      <span id="stat-culled">0</span></div>
         </div>
