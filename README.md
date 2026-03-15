@@ -13,13 +13,10 @@ Start with a handful of creatures. Cull the weak. Breed the strong. Watch traits
 - **Unlock** new mechanics as your population grows
 - **Compete** on the leaderboard once your lineage is strong enough
 
----
-
 ## 🚧 Status
  
 Early development. Expect things to break, change, and occasionally evolve into something unexpected.
- 
----
+
  
 ## 🐛 Found a Bug?
  
