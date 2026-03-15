@@ -289,7 +289,6 @@ const SECRET_MILESTONES=[
   {id:'ms_s_thirsty',   name:'Thirsty',            desc:'Attempt to breed when population is at the cap, 10 times.',         check:s=>safeNum(s.breedCapHits)>=10,    gp:5},
   {id:'ms_s_refresh',   name:'Refresh Addict',     desc:'Refresh the leaderboard 20 times.',                                 check:s=>safeNum(s.lbRefreshCount)>=20,  gp:5},
   {id:'ms_s_auto',      name:'Auto Addict',        desc:'Let the auto-breeder run 500 breeds without a single manual breed.',check:s=>safeNum(s.autoOnlyBreeds)>=500, gp:5},
-  {id:'ms_s_iron',      name:'Iron Will',          desc:'Reach generation 200 without buying any diamond upgrades.',         check:s=>s.generation>=200&&safeNum(s.upgrades?.traitCapBoost)===0&&safeNum(s.upgrades?.eliteMutation)===0&&safeNum(s.upgrades?.deepArchive)===0, gp:5},
   {id:'ms_s_complete',  name:'Completionist',      desc:`Own all ${TOTAL_ICONS} icons.`,                                     check:s=>(s.ownedIcons||[]).length>=TOTAL_ICONS, gp:5},
   {id:'ms_s_pvpwin',    name:'The Challenger',     desc:'Win your first PvP fight.',                                         check:s=>safeNum(s.pvpWins)>=1,          gp:5},
   {id:'ms_s_dispose',   name:'Necessary Evil',     desc:'Dispose of an immortal.',                                           check:s=>!!s.hasDisposedImmortal,        gp:5},
