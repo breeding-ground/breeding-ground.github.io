@@ -30,9 +30,9 @@ const GOLD_UPGRADES=[
   {id:'lineageMem',name:'Lineage Memory',desc:'Offspring can recall best-ever trait values.',levels:[{cost:150,label:'Lv1—5%'},{cost:500,label:'Lv2—12%'},{cost:1800,label:'Lv3—25%'},{cost:6000,label:'Lv4—40%'},{cost:20000,label:'Lv5—60%'}]},
   {id:'hybridVigor',name:'Hybrid Vigor',desc:'Post-inheritance bonus to top traits.',levels:[{cost:80,label:'Lv1—10% +1'},{cost:300,label:'Lv2—22% +2'},{cost:1000,label:'Lv3—35% +3'},{cost:3500,label:'Lv4—50% all above avg'}]},
   {id:'adaptiveGenetics',name:'Adaptive Genetics',desc:'Unlucky traits nudged toward parent average.',levels:[{cost:100,label:'Lv1—20%'},{cost:400,label:'Lv2—45%'},{cost:1500,label:'Lv3—70%'},{cost:5000,label:'Lv4—always corrects'}]},
-  {id:'autoBreeder',name:'Auto-Breeder',desc:'Automatically breeds at set speed.',levels:[{cost:500,label:'Lv1—0.2/sec'},{cost:2000,label:'Lv2—0.5/sec'},{cost:8000,label:'Lv3—1/sec'},{cost:30000,label:'Lv4—2/sec'},{cost:100000,label:'Lv5—5/sec'}]},
+  {id:'autoBreeder',name:'Auto-Breeder',desc:'Automatically breeds at set speed.',levels:[{cost:500,label:'Lv1—0.2/sec'},{cost:2000,label:'Lv2—0.5/sec'},{cost:8000,label:'Lv3—1/sec'},{cost:30000,label:'Lv4—2/sec'},{cost:100000,label:'Lv5—5/sec'},{cost:1000000,label:'Lv6—20/sec'}]},
 ];
-const AUTO_RATES=[0,0.2,0.5,1,2,5];
+const AUTO_RATES=[0,0.2,0.5,1,2,5,20];
 
 // ═══════════════════════════════════════════════════════════
 //  DIAMOND UPGRADES
@@ -267,7 +267,7 @@ const MILESTONE_TRACKS=[
   {id:'population',name:'POPULATION',val:s=>safeNum(s.maxPopEver,s.population.length),unit:'max alive',
    tiers:[{id:'mt_pop_5',name:'Small Group',target:5,gp:1},{id:'q_pop_8',name:'Growing',target:8,gp:1},{id:'mt_pop_12',name:'Cluster',target:12,gp:1},{id:'mt_pop_20',name:'Colony',target:20,gp:1},{id:'mt_pop_30',name:'Settlement',target:30,gp:2},{id:'mt_pop_40',name:'Commune',target:40,gp:2},{id:'mt_pop_60',name:'Township',target:60,gp:3},{id:'mt_pop_100',name:'City',target:100,gp:3}]},
   {id:'upgrades',name:'UPGRADES',val:s=>GOLD_UPGRADES.reduce((n,d)=>n+safeNum(s.upgrades?.[d.id]),0),unit:'gold upgrade levels',
-   tiers:[{id:'q_first_upgrade',name:'First Investment',target:1,gp:1},{id:'mt_upg_5',name:'Invested',target:5,gp:1},{id:'mt_upg_15',name:'Committed',target:15,gp:1},{id:'mt_upg_25',name:'Dedicated',target:25,gp:2},{id:'mt_upg_35',name:'Obsessed',target:35,gp:2},{id:'mt_upg_45',name:'Expert',target:45,gp:3},{id:'mt_upg_52',name:'Gold Maxed',target:52,gp:4}]},
+   tiers:[{id:'q_first_upgrade',name:'First Investment',target:1,gp:1},{id:'mt_upg_5',name:'Invested',target:5,gp:1},{id:'mt_upg_15',name:'Committed',target:15,gp:1},{id:'mt_upg_25',name:'Dedicated',target:25,gp:2},{id:'mt_upg_35',name:'Obsessed',target:35,gp:2},{id:'mt_upg_45',name:'Expert',target:45,gp:3},{id:'mt_upg_52',name:'Gold Maxed',target:53,gp:4}]},
   {id:'research',name:'RESEARCH',val:s=>safeNum(s.research?.labInterns)+safeNum(s.research?.geneAnalysts)+safeNum(s.research?.lineageArchivists)+(s.research?.headOfResearch?1:0)+(s.research?.automatedSequencer?1:0),unit:'researchers',
    tiers:[{id:'m_first_researcher',name:'Research Initiative',target:1,gp:1},{id:'mt_res_3',name:'Growing Team',target:3,gp:1},{id:'mt_res_8',name:'Division',target:8,gp:2},{id:'mt_res_15',name:'Department',target:15,gp:2},{id:'mt_res_25',name:'Full Lab',target:25,gp:3},{id:'mt_res_37',name:'Complete Division',target:37,gp:4}]},
   {id:'icons',name:'ICON COLLECTION',val:s=>(s.ownedIcons||[]).length,unit:'icons',
