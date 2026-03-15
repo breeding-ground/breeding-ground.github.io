@@ -1,6 +1,5 @@
 // ============================================================
 //  auth.js  —  Firebase Auth + Firestore + Autosave + Leaderboard
-//  Replace the firebaseConfig block below with your own config
 // ============================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -23,16 +22,14 @@ import {
   getDocs,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ── 🔧 REPLACE THIS WITH YOUR FIREBASE CONFIG ──────────────
 const firebaseConfig = {
-  apiKey: "AIzaSyC4DLaJ0_uIwm_ibzQ3AdEsN-pVgROk590",
-  authDomain: "breeding-ground-b275c.firebaseapp.com",
-  projectId: "breeding-ground-b275c",
-  storageBucket: "breeding-ground-b275c.firebasestorage.app",
+  apiKey:            "AIzaSyC4DLaJ0_uIwm_ibzQ3AdEsN-pVgROk590",
+  authDomain:        "breeding-ground-b275c.firebaseapp.com",
+  projectId:         "breeding-ground-b275c",
+  storageBucket:     "breeding-ground-b275c.firebasestorage.app",
   messagingSenderId: "80892025030",
-  appId: "1:80892025030:web:0f25c0bda0475862cbdfc7"
+  appId:             "1:80892025030:web:0f25c0bda0475862cbdfc7",
 };
-// ────────────────────────────────────────────────────────────
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -153,9 +150,9 @@ window.saveUsername = async () => {
   const msgEl = document.getElementById("username-message");
   const raw   = (input?.value || "").trim();
 
-  if (!raw)          { msgEl.textContent = "Enter a username.";                 msgEl.className = "message error"; return; }
-  if (raw.length < 2){ msgEl.textContent = "At least 2 characters.";           msgEl.className = "message error"; return; }
-  if (raw.length > 20){ msgEl.textContent = "Max 20 characters.";              msgEl.className = "message error"; return; }
+  if (!raw)            { msgEl.textContent = "Enter a username.";                  msgEl.className = "message error"; return; }
+  if (raw.length < 2)  { msgEl.textContent = "At least 2 characters.";            msgEl.className = "message error"; return; }
+  if (raw.length > 20) { msgEl.textContent = "Max 20 characters.";                msgEl.className = "message error"; return; }
   if (!/^[a-zA-Z0-9_\- ]+$/.test(raw)) {
     msgEl.textContent = "Letters, numbers, spaces, _ and - only.";
     msgEl.className = "message error";
@@ -189,21 +186,21 @@ window.saveGame = async () => {
     const score    = calcScore();
     const username = window._currentUsername || null;
 
-    // Write save and leaderboard entry in parallel
     await Promise.all([
       setDoc(doc(db, "saves", currentUser.uid), {
         ...data,
         savedAt: new Date().toISOString(),
       }),
       setDoc(doc(db, "leaderboard", currentUser.uid), {
-        uid:            currentUser.uid,
+        uid:                 currentUser.uid,
         username,
         score,
-        highestFitness: data.highestFitness  || 0,
-        generation:     data.generation      || 1,
-        totalBred:      data.totalBred       || 0,
-        totalCulled:    data.totalCulled     || 0,
-        updatedAt:      new Date().toISOString(),
+        highestFitness:      data.highestFitness      || 0,
+        generation:          data.generation          || 1,
+        totalBred:           data.totalBred           || 0,
+        totalCulled:         data.totalCulled         || 0,
+        totalDiamondsEarned: data.totalDiamondsEarned || 0,
+        updatedAt:           new Date().toISOString(),
       }),
     ]);
 
@@ -242,16 +239,12 @@ async function loadGame() {
 
 // ═══════════════════════════════════════════════════════════
 //  LEADERBOARD
-//  Refresh: save the player's current state first so their
-//  own entry is always up to date before fetching the board.
 // ═══════════════════════════════════════════════════════════
 
 window.refreshLeaderboard = async () => {
   renderLeaderboardLoading();
   try {
-    // Save current state first so this player's row is current
     await saveGame();
-
     const q    = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(25));
     const snap = await getDocs(q);
     const entries = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
