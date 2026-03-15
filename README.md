@@ -6,8 +6,6 @@
  
 Start with a handful of creatures. Cull the weak. Breed the strong. Watch traits emerge, stabilise, and compound across generations. Build a lineage that would make Darwin nervous.
 
----
-
 ## 🕹️ How to Play
  
 - **Breed** creatures together to produce offspring
