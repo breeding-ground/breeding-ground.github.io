@@ -5,7 +5,7 @@
 const TRAIT_KEYS=['speed','strength','stamina','intelligence','resilience'];
 const TRAIT_ABR=['SPD','STR','STA','INT','RES'];
 const TRAIT_MAX=50;
-const POP_CAP_TABLE=[20,25,30,40,60,100];
+const POP_CAP_TABLE=[20,25,30,40,60,100,300,500];
 const IMMORTAL_THRESHOLD=125;
 const BASE_ATK=125,BASE_SPD=125,BASE_DEF=125,BASE_HP=200;
 
@@ -20,7 +20,7 @@ function bestSingleTrait(s){return Math.max(0,...(s.population||[]).map(c=>Math.
 //  GOLD UPGRADES
 // ═══════════════════════════════════════════════════════════
 const GOLD_UPGRADES=[
-  {id:'popCap',name:'Expanded Habitat',desc:'Raise the population cap.',levels:[{cost:60,label:'Lv1—20→25'},{cost:200,label:'Lv2—25→30'},{cost:600,label:'Lv3—30→40'},{cost:2000,label:'Lv4—40→60'},{cost:7000,label:'Lv5—60→100'}]},
+  {id:'popCap',name:'Expanded Habitat',desc:'Raise the population cap.',levels:[{cost:60,label:'Lv1—20→25'},{cost:200,label:'Lv2—25→30'},{cost:600,label:'Lv3—30→40'},{cost:2000,label:'Lv4—40→60'},{cost:7000,label:'Lv5—60→100'},{cost:1000000,label:'Lv6—100→300'},{cost:5000000,label:'Lv7—300→500'}]},
   {id:'mutation',name:'Mutation Boost',desc:'Higher mutation rate and stronger positive mutations.',levels:[{cost:25,label:'Lv1—15%→25%'},{cost:75,label:'Lv2—25%→40%'},{cost:200,label:'Lv3—40%→60%'},{cost:600,label:'Lv4—always beneficial'},{cost:2000,label:'Lv5—two traits mutate'},{cost:8000,label:'Lv6—double bonus'}]},
   {id:'traitAmp',name:'Trait Amplifier',desc:"Offspring more likely to inherit the stronger parent's trait.",levels:[{cost:50,label:'Lv1—15%'},{cost:160,label:'Lv2—30%'},{cost:450,label:'Lv3—55%'},{cost:1400,label:'Lv4—always stronger'},{cost:4500,label:'Lv5—always stronger +bonus'}]},
   {id:'breedYield',name:'Breeding Yield',desc:'Earn more gold per offspring.',levels:[{cost:30,label:'Lv1—3g'},{cost:90,label:'Lv2—6g'},{cost:280,label:'Lv3—12g'},{cost:800,label:'Lv4—25g'},{cost:2500,label:'Lv5—50g'},{cost:8000,label:'Lv6—100g'}]},
@@ -112,11 +112,11 @@ function getImmortalStats(im){
 // ═══════════════════════════════════════════════════════════
 const GENE_VAULTS=[
   {id:'aquatic',name:'Aquatic Genome',theme:'DEEP SEA',cssClass:'vb-aquatic',cost:1000,desc:'Specimens from deep ocean thermal vents.',
-   icons:['🐋','🐬','🦈','🐙','🦑','🐡','🐠','🦞','🦀','🐚','🌊','🐸','🦭','🐳','🦐','🐟','🐊','🫧','🪸','🦕','🌀','💧','🐉','🦎','🔵']},
+   icons:['🐋','🐬','🦈','🐙','🦑','🐡','🐠','🦞','🦀','🐚','🌊','🐸','🦭','🐳','🦐','🐟','🐊','🫧','🪸','🦕','🫀','💧','🐉','🦎','🔵']},
   {id:'flora',name:'Flora Strain',theme:'OVERGROWTH',cssClass:'vb-flora',cost:1000,desc:'From ancient seed vaults and jungle biomass.',
-   icons:['🌸','🌺','🌻','🌹','🌷','🌿','🍀','🍁','🌾','🌲','🌳','🌴','🌵','🎋','🍄','🌱','🌼','💐','🍃','🎄','🪴','🌏','🪨','🍂','🌍']},
+   icons:['🌸','🌺','🌻','🌹','🌷','🌿','🍀','🍁','🌾','🌲','🌳','🌴','🌵','🎋','🍄','🌱','🌼','💐','🍃','🎄','🪴','🪵','🪨','🍂','🌍']},
   {id:'cosmos',name:'Cosmos Sequence',theme:'DEEP SPACE',cssClass:'vb-cosmos',cost:1000,desc:'Extraterrestrial material from meteorite fragments.',
-   icons:['🌟','⭐','💫','✨','🌙','🌠','🚀','🛸','🪐','☄️','🌌','🔭','🛰️','🌍','🌕','🌐','🪨','🌒','🌓','🌔','🌛','🌜','🌝','🌞','🔆']},
+   icons:['🌟','⭐','💫','✨','🌙','🌠','🚀','🛸','🪐','☄️','🌌','🔭','🛰️','🌏','🌕','🌐','🌃','🌒','🌓','🌔','🌛','🌜','🌝','🌞','🔆']},
   {id:'predator',name:'Apex Predator',theme:'HUNT',cssClass:'vb-predator',cost:1000,desc:'From the most dangerous specimens ever catalogued.',
    icons:['🦁','🐯','🐆','🐻','🦊','🦝','🐺','🦅','🦉','🐍','🦂','🕷️','🦇','🦃','🦚','🦜','🦋','🪲','🐝','🦏','🐘','🦬','🐃','🦌','🔥']},
   {id:'ancient',name:'Ancient Legacy',theme:'PRIMORDIAL',cssClass:'vb-ancient',cost:1000,desc:'Relics from civilisations that understood genetics before us.',
@@ -268,9 +268,9 @@ const MILESTONE_TRACKS=[
   {id:'diamonds',name:'DIAMONDS EARNED',val:s=>s.totalDiamondsEarned,unit:'total 💎',
    tiers:[{id:'m_dia_1',name:'First Jewel',target:1,gp:0},{id:'m_dia_5',name:'Sparkle',target:5,gp:1},{id:'m_dia_10',name:'Gem Collector',target:10,gp:1},{id:'m_dia_25',name:'Jeweller',target:25,gp:1},{id:'m_dia_50',name:'Hoarder',target:50,gp:1},{id:'m_dia_100',name:'Diamond Mine',target:100,gp:2},{id:'m_dia_250',name:'Baron',target:250,gp:2},{id:'m_dia_500',name:'Mogul',target:500,gp:2},{id:'m_dia_1000',name:'Empire',target:1000,gp:3},{id:'m_dia_2500',name:'Dynasty',target:2500,gp:3},{id:'m_dia_10000',name:'Diamond God',target:10000,gp:4}]},
   {id:'population',name:'POPULATION',val:s=>safeNum(s.maxPopEver,s.population.length),unit:'max alive',
-   tiers:[{id:'mt_pop_5',name:'Small Group',target:5,gp:1},{id:'q_pop_8',name:'Growing',target:8,gp:1},{id:'mt_pop_12',name:'Cluster',target:12,gp:1},{id:'mt_pop_20',name:'Colony',target:20,gp:1},{id:'mt_pop_30',name:'Settlement',target:30,gp:2},{id:'mt_pop_40',name:'Commune',target:40,gp:2},{id:'mt_pop_60',name:'Township',target:60,gp:3},{id:'mt_pop_100',name:'City',target:100,gp:3}]},
+   tiers:[{id:'mt_pop_5',name:'Small Group',target:5,gp:1},{id:'q_pop_8',name:'Growing',target:8,gp:1},{id:'mt_pop_12',name:'Cluster',target:12,gp:1},{id:'mt_pop_20',name:'Colony',target:20,gp:1},{id:'mt_pop_30',name:'Settlement',target:30,gp:2},{id:'mt_pop_40',name:'Commune',target:40,gp:2},{id:'mt_pop_60',name:'Township',target:60,gp:3},{id:'mt_pop_100',name:'City',target:100,gp:3},{id:'mt_pop_300',name:'Metropolis',target:300,gp:5},{id:'mt_pop_500',name:'Megacity',target:500,gp:8}]},
   {id:'upgrades',name:'UPGRADES',val:s=>GOLD_UPGRADES.reduce((n,d)=>n+safeNum(s.upgrades?.[d.id]),0),unit:'gold upgrade levels',
-   tiers:[{id:'q_first_upgrade',name:'First Investment',target:1,gp:1},{id:'mt_upg_5',name:'Invested',target:5,gp:1},{id:'mt_upg_15',name:'Committed',target:15,gp:1},{id:'mt_upg_25',name:'Dedicated',target:25,gp:2},{id:'mt_upg_35',name:'Obsessed',target:35,gp:2},{id:'mt_upg_45',name:'Expert',target:45,gp:3},{id:'mt_upg_52',name:'Gold Maxed',target:53,gp:4}]},
+   tiers:[{id:'q_first_upgrade',name:'First Investment',target:1,gp:1},{id:'mt_upg_5',name:'Invested',target:5,gp:1},{id:'mt_upg_15',name:'Committed',target:15,gp:1},{id:'mt_upg_25',name:'Dedicated',target:25,gp:2},{id:'mt_upg_35',name:'Obsessed',target:35,gp:2},{id:'mt_upg_45',name:'Expert',target:45,gp:3},{id:'mt_upg_55',name:'Gold Maxed',target:55,gp:4}]},
   {id:'research',name:'RESEARCH',val:s=>safeNum(s.research?.labInterns)+safeNum(s.research?.geneAnalysts)+safeNum(s.research?.lineageArchivists)+(s.research?.headOfResearch?1:0)+(s.research?.automatedSequencer?1:0),unit:'researchers',
    tiers:[{id:'m_first_researcher',name:'Research Initiative',target:1,gp:1},{id:'mt_res_3',name:'Growing Team',target:3,gp:1},{id:'mt_res_8',name:'Division',target:8,gp:2},{id:'mt_res_15',name:'Department',target:15,gp:2},{id:'mt_res_25',name:'Full Lab',target:25,gp:3},{id:'mt_res_37',name:'Complete Division',target:37,gp:4}]},
   {id:'icons',name:'ICON COLLECTION',val:s=>(s.ownedIcons||[]).length,unit:'icons',
