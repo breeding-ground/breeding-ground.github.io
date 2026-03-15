@@ -62,6 +62,7 @@
           <button class="tab-btn"        id="tab-upgrades"    onclick="switchTab('upgrades')">UPGRADES</button>
           <button class="tab-btn"        id="tab-research"    onclick="switchTab('research')">RESEARCH</button>
           <button class="tab-btn"        id="tab-milestones"  onclick="switchTab('milestones')">MILESTONES</button>
+          <button class="tab-btn"        id="tab-vault"       onclick="switchTab('vault')">GENE VAULT</button>
           <button class="tab-btn"        id="tab-leaderboard" onclick="switchTab('leaderboard')">LEADERBOARD</button>
         </div>
         <div id="panel-log"         class="panel">        <div id="log-output"></div></div>
@@ -69,6 +70,7 @@
         <div id="panel-upgrades"    class="panel hidden"> <div id="upgrades-container"></div></div>
         <div id="panel-research"    class="panel hidden"> <div id="research-container"></div></div>
         <div id="panel-milestones"  class="panel hidden"> <div id="milestones-container"></div></div>
+        <div id="panel-vault"       class="panel hidden"> <div id="vault-container"></div></div>
         <div id="panel-leaderboard" class="panel hidden"> <div id="leaderboard-container"></div></div>
       </div>
 
@@ -84,13 +86,11 @@
           <div class="stat-row"><span class="stat-label">Total Bred</span>  <span id="stat-bred">0</span></div>
           <div class="stat-row"><span class="stat-label">Culled</span>      <span id="stat-culled">0</span></div>
         </div>
-
         <h2>// ACTIONS</h2>
         <div id="actions">
           <button onclick="breedCycle()">[ BREED ]</button>
           <button onclick="cullWeakest()">[ CULL WEAKEST ]</button>
         </div>
-
         <h2>// SAVE</h2>
         <div id="save-controls">
           <button onclick="saveGame()">[ SAVE NOW ]</button>
