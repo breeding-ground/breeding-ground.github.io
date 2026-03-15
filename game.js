@@ -767,11 +767,11 @@ window.renderLeaderboard=(entries,currentUid)=>{
   const c=document.getElementById('leaderboard-container'); if(!c) return;
   let html=`<div class="lb-header"><span class="lb-title">// LEADERBOARD</span><button class="lb-refresh" onclick="window.refreshLeaderboard&&window.refreshLeaderboard()">[ REFRESH ]</button></div><p class="lb-formula">Score = (<span>fitness×200</span> + <span>gen×10</span> + <span>bred×3</span> + <span>culled×5</span> + <span>gold×1</span> + <span>💎×100</span>) ÷ 10</p>`;
   if(!entries?.length){html+=`<p class="lb-empty">No entries yet — save to appear here.</p>`;c.innerHTML=html;return;}
-  html+=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>SCORE</th><th>FITNESS</th><th>GEN</th></tr></thead><tbody>`;
+  html+=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>SCORE</th><th>MILESTONES</th><th>GEN</th></tr></thead><tbody>`;
   entries.forEach((e,i)=>{
     const rank=i+1,isYou=e.uid===currentUid;
     const nameDisplay=`${e.selectedIcon?e.selectedIcon+' ':''}${esc(e.username||'Anonymous')}${isYou?' ◄ you':''}`;
-    html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(safeNum(e.score))}</td><td>${fmt(safeNum(e.highestFitness))}</td><td>${fmt(safeNum(e.generation))}</td></tr>`;
+    html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(safeNum(e.score))}</td><td>${fmt(safeNum(e.completedMilestones))}</td><td>${fmt(safeNum(e.generation))}</td></tr>`;
   });
   html+=`</tbody></table>`;c.innerHTML=html;
 };
