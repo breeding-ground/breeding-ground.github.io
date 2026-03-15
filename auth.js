@@ -123,16 +123,18 @@ window.saveGame = async () => {
   try {
     if(statusEl){ statusEl.textContent="Saving…"; statusEl.className="message"; }
     const data=getSaveData(), score=calcScore(), username=window._currentUsername||null;
+    const ms=window.getMilestoneCounts?window.getMilestoneCounts():{done:0,total:0};
     await Promise.all([
       setDoc(doc(db,"saves",currentUser.uid),{...data,savedAt:new Date().toISOString()}),
       setDoc(doc(db,"leaderboard",currentUser.uid),{
         uid:currentUser.uid, username, score,
-        selectedIcon:    data.selectedIcon     || null,
-        completedMilestones: (data.completedMilestones||[]).length,
-        generation:      data.generation       || 1,
-        totalBred:       data.totalBred        || 0,
-        totalCulled:     data.totalCulled      || 0,
-        totalDiamondsEarned: data.totalDiamondsEarned || 0,
+        selectedIcon:         data.selectedIcon          || null,
+        milestoneDone:        ms.done,
+        milestoneTotal:       ms.total,
+        generation:           data.generation            || 1,
+        totalBred:            data.totalBred             || 0,
+        totalCulled:          data.totalCulled           || 0,
+        totalDiamondsEarned:  data.totalDiamondsEarned   || 0,
         updatedAt: new Date().toISOString(),
       }),
     ]);
