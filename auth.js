@@ -36,7 +36,6 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     currentUser = null;
     if (autosaveInterval) { clearInterval(autosaveInterval); autosaveInterval = null; }
-    if (window.stopGpTimer) window.stopGpTimer();
     document.getElementById("auth-screen").classList.remove("hidden");
     document.getElementById("game-screen").classList.add("hidden");
   }
@@ -84,7 +83,6 @@ window.login = async () => {
 
 window.logout = async () => {
   await saveGame();
-  if (window.stopGpTimer) window.stopGpTimer();
   await signOut(auth);
 };
 
