@@ -396,3 +396,17 @@ h2:first-child { margin-top:0; }
 #save-status { text-align:left; }
 
 .hidden { display:none !important; }
+
+/* ── DARWIN QUOTE ───────────────────────────────────────────── */
+#darwin-quote {
+  position:fixed; bottom:12px; right:16px; max-width:280px;
+  text-align:right; z-index:5; pointer-events:none;
+  display:flex; flex-direction:column; gap:3px;
+}
+.darwin-text {
+  color:#2a2a2a; font-size:10px; line-height:1.5;
+  font-style:italic; letter-spacing:0.3px;
+}
+.darwin-attr {
+  color:#222222; font-size:9px; letter-spacing:1px;
+}
