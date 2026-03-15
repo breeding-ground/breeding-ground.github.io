@@ -9,7 +9,6 @@
 </head>
 <body>
 
-  <!-- ── AUTH ──────────────────────────────────────────────── -->
   <div id="auth-screen">
     <div id="auth-box">
       <h1>🧬 BREEDING GROUND</h1>
@@ -33,7 +32,6 @@
     </div>
   </div>
 
-  <!-- ── USERNAME MODAL ────────────────────────────────────── -->
   <div id="username-modal" class="modal-overlay hidden">
     <div class="modal-box">
       <h2 style="margin-top:0">// SET USERNAME</h2>
@@ -47,7 +45,6 @@
     </div>
   </div>
 
-  <!-- ── GAME ───────────────────────────────────────────────── -->
   <div id="game-screen" class="hidden">
     <header>
       <span id="header-title">🧬 BREEDING GROUND</span>
@@ -60,19 +57,19 @@
     <div id="game-container">
       <div id="content-area">
         <div id="tab-bar">
-          <button class="tab-btn active" id="tab-log"          onclick="switchTab('log')">LOG</button>
-          <button class="tab-btn"        id="tab-population"   onclick="switchTab('population')">POPULATION</button>
-          <button class="tab-btn"        id="tab-upgrades"     onclick="switchTab('upgrades')">UPGRADES</button>
-          <button class="tab-btn"        id="tab-quests"       onclick="switchTab('quests')">QUESTS</button>
-          <button class="tab-btn"        id="tab-achievements" onclick="switchTab('achievements')">ACHIEVEMENTS</button>
-          <button class="tab-btn"        id="tab-leaderboard"  onclick="switchTab('leaderboard')">LEADERBOARD</button>
+          <button class="tab-btn active" id="tab-log"         onclick="switchTab('log')">LOG</button>
+          <button class="tab-btn"        id="tab-population"  onclick="switchTab('population')">POPULATION</button>
+          <button class="tab-btn"        id="tab-upgrades"    onclick="switchTab('upgrades')">UPGRADES</button>
+          <button class="tab-btn"        id="tab-research"    onclick="switchTab('research')">RESEARCH</button>
+          <button class="tab-btn"        id="tab-milestones"  onclick="switchTab('milestones')">MILESTONES</button>
+          <button class="tab-btn"        id="tab-leaderboard" onclick="switchTab('leaderboard')">LEADERBOARD</button>
         </div>
-        <div id="panel-log"          class="panel">        <div id="log-output"></div></div>
-        <div id="panel-population"   class="panel hidden"> <div id="population-table"></div></div>
-        <div id="panel-upgrades"     class="panel hidden"> <div id="upgrades-container"></div></div>
-        <div id="panel-quests"       class="panel hidden"> <div id="quests-container"></div></div>
-        <div id="panel-achievements" class="panel hidden"> <div id="achievements-container"></div></div>
-        <div id="panel-leaderboard"  class="panel hidden"> <div id="leaderboard-container"></div></div>
+        <div id="panel-log"         class="panel">        <div id="log-output"></div></div>
+        <div id="panel-population"  class="panel hidden"> <div id="population-table"></div></div>
+        <div id="panel-upgrades"    class="panel hidden"> <div id="upgrades-container"></div></div>
+        <div id="panel-research"    class="panel hidden"> <div id="research-container"></div></div>
+        <div id="panel-milestones"  class="panel hidden"> <div id="milestones-container"></div></div>
+        <div id="panel-leaderboard" class="panel hidden"> <div id="leaderboard-container"></div></div>
       </div>
 
       <div id="stats-panel">
@@ -80,10 +77,10 @@
         <div id="stats-output">
           <div class="stat-row"><span class="stat-label">Generation</span>  <span id="stat-gen">1</span></div>
           <div class="stat-row"><span class="stat-label">Population</span>  <span id="stat-pop">0</span></div>
-          <div class="stat-row"><span class="stat-label">Gold</span>        <span id="stat-gold"    class="gold">0</span></div>
+          <div class="stat-row"><span class="stat-label">Gold</span>        <span id="stat-gold"     class="gold">0</span></div>
           <div class="stat-row"><span class="stat-label">Diamonds</span>    <span id="stat-diamonds" class="diamond">0 💎</span></div>
           <div class="stat-row"><span class="stat-label">Best Fitness</span><span id="stat-fitness">—</span></div>
-          <div class="stat-row"><span class="stat-label">Score</span>       <span id="stat-score"   class="score-val">0</span></div>
+          <div class="stat-row"><span class="stat-label">Score</span>       <span id="stat-score"    class="score-val">0</span></div>
           <div class="stat-row"><span class="stat-label">Total Bred</span>  <span id="stat-bred">0</span></div>
           <div class="stat-row"><span class="stat-label">Culled</span>      <span id="stat-culled">0</span></div>
         </div>
@@ -98,7 +95,7 @@
         <div id="save-controls">
           <button onclick="saveGame()">[ SAVE NOW ]</button>
           <p id="save-status" class="message"></p>
-          <p class="note">Autosaves every 20 min</p>
+          <p class="note">Autosaves every 5 min</p>
         </div>
       </div>
     </div>
