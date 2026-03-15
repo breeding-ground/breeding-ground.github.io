@@ -320,6 +320,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); displ
 .vb-cosmos   { border-left:3px solid #7c3aed; } .vb-cosmos   .vb-theme { color:#7c3aed; }
 .vb-predator { border-left:3px solid #dc2626; } .vb-predator .vb-theme { color:#dc2626; }
 .vb-ancient  { border-left:3px solid #b45309; } .vb-ancient  .vb-theme { color:#b45309; }
+.vb-machine  { border-left:3px solid #6366f1; } .vb-machine  .vb-theme { color:#6366f1; }
 .vb-header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
 .vb-name { color:var(--text); font-size:14px; }
 .vb-theme { font-size:10px; letter-spacing:2px; }
