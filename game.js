@@ -218,6 +218,13 @@ function researchBreedYield(){ return safeNum(state.research?.labInterns)*0.15*r
 function researchCullYield() { return safeNum(state.research?.geneAnalysts)*0.4*researchMult(); }
 function researchArchYield() { return safeNum(state.research?.lineageArchivists)*1.0*researchMult(); }
 
+function migrateCrature(c){
+  if(!c||typeof c!=='object') return null;
+  const t=c.traits||{};
+  return { id:c.id||Math.random().toString(36).slice(2,8).toUpperCase(), generation:safeNum(c.generation,1),
+    traits:{ speed:safeNum(t.speed,rand(1,8)), strength:safeNum(t.strength,rand(1,8)), stamina:safeNum(t.stamina,rand(1,8)), intelligence:safeNum(t.intelligence,rand(1,8)), resilience:safeNum(t.resilience,rand(1,8)) }};
+}
+
 function sanitiseState(s){
   return {
     ...s,
@@ -255,13 +262,6 @@ function sanitiseState(s){
     },
     population:(s.population||[]).map(migrateCrature).filter(Boolean),
   };
-}
-
-function migrateCrature(c){
-  if(!c||typeof c!=='object') return null;
-  const t=c.traits||{};
-  return { id:c.id||Math.random().toString(36).slice(2,8).toUpperCase(), generation:safeNum(c.generation,1),
-    traits:{ speed:safeNum(t.speed,rand(1,8)), strength:safeNum(t.strength,rand(1,8)), stamina:safeNum(t.stamina,rand(1,8)), intelligence:safeNum(t.intelligence,rand(1,8)), resilience:safeNum(t.resilience,rand(1,8)) }};
 }
 
 function rebuildBestEverTraits(){
