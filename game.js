@@ -726,6 +726,7 @@ window.toggleSelect=(id)=>{
 
 // PvP
 window.openPvpModal=(targetUid,targetName)=>{
+  try{
   if(!(state.immortals||[]).length)return addLog('Need at least one immortal to challenge.','warn');
   pvpTarget={uid:targetUid,username:targetName};pvpMyImmortal=null;
   document.getElementById('pvp-challenge-target').textContent=`Challenge ${targetName}?`;
@@ -743,6 +744,7 @@ window.openPvpModal=(targetUid,targetName)=>{
   document.getElementById('pvp-wager-amount').value='';
   document.getElementById('pvp-wager-balance').textContent=`Your gold: ${fmt(state.gold)} | Your 💎: ${fmt(state.diamonds)}`;
   document.getElementById('pvp-challenge-modal').classList.remove('hidden');
+  }catch(e){console.error('openPvpModal internal error:',e);addLog('PvP modal error — check console.','warn');}
 };
 window.cancelPvpChallenge=()=>{pvpTarget=null;pvpMyImmortal=null;document.getElementById('pvp-challenge-modal').classList.add('hidden');};
 window.confirmPvpChallenge=async()=>{
@@ -1223,10 +1225,16 @@ window.renderLeaderboard=(entries,currentUid)=>{
     const nameDisplay=`${e.selectedIcon?e.selectedIcon+' ':''}${esc(e.username||'Anonymous')}${isYou?' ◄ you':''}`;
     const msDone=safeNum(e.milestoneDone||e.completedMilestones);
     const msDisplay=currentTotal?`${fmt(msDone)}/${fmt(currentTotal)}`:`${fmt(msDone)}`;
-    const fightBtn=(!isYou&&hasImmortals)?`<button class="lb-fight-btn" onclick="openPvpModal('${e.uid}','${esc(e.username||'Anonymous')}')">⚔</button>`:'';
+    const fightBtn=(!isYou&&hasImmortals)?`<button class="lb-fight-btn" data-uid="${e.uid}" data-name="${esc(e.username||'Anonymous')}">⚔</button>`:'';
     html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(e.displayScore)}</td><td>${msDisplay}</td><td>${fmt(safeNum(e.generation))}</td>${hasImmortals?`<td>${fightBtn}</td>`:''}</tr>`;
   });
   html+=`</tbody></table>`;c.innerHTML=html;
+  c.querySelectorAll('.lb-fight-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      try{ window.openPvpModal(btn.dataset.uid, btn.dataset.name); }
+      catch(e){ console.error('openPvpModal error:',e); }
+    });
+  });
 };
 window.renderLeaderboardLoading=()=>{const c=document.getElementById('leaderboard-container');if(c)c.innerHTML='<p class="lb-loading">Loading leaderboard…</p>';};
 
