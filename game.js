@@ -254,7 +254,7 @@ const MILESTONE_TRACKS=[
   {id:'population',name:'POPULATION',val:s=>safeNum(s.maxPopEver,s.population.length),unit:'max alive',
    tiers:[{id:'mt_pop_5',name:'Small Group',target:5,gp:1},{id:'q_pop_8',name:'Growing',target:8,gp:1},{id:'mt_pop_12',name:'Cluster',target:12,gp:1},{id:'mt_pop_20',name:'Colony',target:20,gp:1},{id:'mt_pop_30',name:'Settlement',target:30,gp:2},{id:'mt_pop_40',name:'Commune',target:40,gp:2},{id:'mt_pop_60',name:'Township',target:60,gp:3},{id:'mt_pop_100',name:'City',target:100,gp:3}]},
   {id:'upgrades',name:'UPGRADES',val:s=>GOLD_UPGRADES.reduce((n,d)=>n+safeNum(s.upgrades?.[d.id]),0),unit:'gold upgrade levels',
-   tiers:[{id:'q_first_upgrade',name:'First Investment',target:1,gp:1},{id:'mt_upg_5',name:'Invested',target:5,gp:1},{id:'mt_upg_15',name:'Committed',target:15,gp:1},{id:'mt_upg_25',name:'Dedicated',target:25,gp:2},{id:'mt_upg_35',name:'Obsessed',target:35,gp:2},{id:'mt_upg_45',name:'Expert',target:45,gp:3},{id:'mt_upg_55',name:'Gold Maxed',target:55,gp:4}]},
+   tiers:[{id:'q_first_upgrade',name:'First Investment',target:1,gp:1},{id:'mt_upg_5',name:'Invested',target:5,gp:1},{id:'mt_upg_15',name:'Committed',target:15,gp:1},{id:'mt_upg_25',name:'Dedicated',target:25,gp:2},{id:'mt_upg_35',name:'Obsessed',target:35,gp:2},{id:'mt_upg_45',name:'Expert',target:45,gp:3},{id:'mt_upg_52',name:'Gold Maxed',target:52,gp:4}]},
   {id:'research',name:'RESEARCH',val:s=>safeNum(s.research?.labInterns)+safeNum(s.research?.geneAnalysts)+safeNum(s.research?.lineageArchivists)+(s.research?.headOfResearch?1:0)+(s.research?.automatedSequencer?1:0),unit:'researchers',
    tiers:[{id:'m_first_researcher',name:'Research Initiative',target:1,gp:1},{id:'mt_res_3',name:'Growing Team',target:3,gp:1},{id:'mt_res_8',name:'Division',target:8,gp:2},{id:'mt_res_15',name:'Department',target:15,gp:2},{id:'mt_res_25',name:'Full Lab',target:25,gp:3},{id:'mt_res_37',name:'Complete Division',target:37,gp:4}]},
   {id:'icons',name:'ICON COLLECTION',val:s=>(s.ownedIcons||[]).length,unit:'icons',
@@ -1122,12 +1122,26 @@ window.renderPvpChallenges=(challenges)=>{
       <div class="pvp-ch-desc">Their champion: ${esc(ch.challengerImmortalName||'?')}</div>
       ${wText}
       <div class="pvp-ch-btns">
-        <button style="border-color:var(--green);color:var(--green)" onclick="openPvpAcceptModal('${ch.id}','${esc(ch.challengerUsername)}','${esc(ch.challengerImmortalName)}','${ch.wagerType||'none'}',${safeNum(ch.wagerAmount)})">[ ACCEPT ]</button>
-        <button class="btn-secondary" onclick="window.rejectPvpChallenge?.('${ch.id}')">[ DECLINE ]</button>
+        <button class="pvp-accept-btn" style="border-color:var(--green);color:var(--green)"
+          data-id="${esc(ch.id)}"
+          data-username="${esc(ch.challengerUsername||'?')}"
+          data-immortal="${esc(ch.challengerImmortalName||'?')}"
+          data-wtype="${esc(ch.wagerType||'none')}"
+          data-wamt="${safeNum(ch.wagerAmount)}">[ ACCEPT ]</button>
+        <button class="pvp-decline-btn btn-secondary" data-id="${esc(ch.id)}">[ DECLINE ]</button>
       </div>
     </div>`;
   });
   el.innerHTML=html;
+  // Attach listeners — avoids apostrophe/special-char breakage in inline onclick
+  el.querySelectorAll('.pvp-accept-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      openPvpAcceptModal(btn.dataset.id,btn.dataset.username,btn.dataset.immortal,btn.dataset.wtype,safeNum(btn.dataset.wamt));
+    });
+  });
+  el.querySelectorAll('.pvp-decline-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{ window.rejectPvpChallenge?.(btn.dataset.id); });
+  });
 };
 
 function renderMilestones(){
