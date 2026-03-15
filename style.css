@@ -1,0 +1,201 @@
+/* === RESET & BASE === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0a0a0a;
+  --surface:  #111111;
+  --border:   #2a2a2a;
+  --green:    #39ff14;
+  --dimgreen: #1a7a08;
+  --text:     #cccccc;
+  --muted:    #555555;
+  --red:      #ff4444;
+  --font:     'Courier New', Courier, monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* === AUTH SCREEN === */
+#auth-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+#auth-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 40px;
+  width: 100%;
+  max-width: 380px;
+}
+
+#auth-box h1 {
+  color: var(--green);
+  font-size: 20px;
+  letter-spacing: 4px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.tagline {
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 28px;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+/* tabs */
+#auth-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 8px 20px;
+  letter-spacing: 1px;
+  margin-bottom: -1px;
+  transition: color 0.2s;
+}
+
+.tab-btn.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+
+/* inputs */
+input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: block;
+  font-family: var(--font);
+  font-size: 13px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus { border-color: var(--green); }
+
+/* buttons */
+button {
+  background: none;
+  border: 1px solid var(--green);
+  color: var(--green);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 10px 16px;
+  transition: background 0.15s, color 0.15s;
+  width: 100%;
+  margin-top: 4px;
+}
+
+button:hover { background: var(--green); color: var(--bg); }
+
+.message {
+  font-size: 12px;
+  margin-top: 12px;
+  min-height: 18px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.message.error { color: var(--red); }
+.message.success { color: var(--green); }
+
+/* === GAME SCREEN === */
+#game-screen { display: flex; flex-direction: column; min-height: 100vh; }
+
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+}
+
+#header-title { color: var(--green); letter-spacing: 3px; font-size: 15px; flex: 1; }
+#header-user  { color: var(--muted); font-size: 12px; }
+#logout-btn   { width: auto; font-size: 12px; padding: 4px 10px; }
+
+#game-container {
+  display: flex;
+  flex: 1;
+  gap: 0;
+}
+
+/* panels */
+#log-panel {
+  flex: 1;
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 50px);
+}
+
+#stats-panel {
+  width: 260px;
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 50px);
+}
+
+h2 {
+  color: var(--dimgreen);
+  font-size: 11px;
+  letter-spacing: 3px;
+  margin-bottom: 14px;
+  margin-top: 24px;
+}
+
+h2:first-child { margin-top: 0; }
+
+#stats-output p { margin-bottom: 6px; color: var(--muted); }
+#stats-output span { color: var(--text); }
+
+/* log entries */
+.log-entry {
+  border-left: 2px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 6px;
+  padding-left: 10px;
+}
+
+.log-entry.highlight { border-left-color: var(--green); color: var(--text); }
+.log-entry.warn      { border-left-color: var(--red);   color: var(--red);  }
+
+/* action buttons */
+#actions button, #save-controls button {
+  margin-bottom: 8px;
+}
+
+#save-status { text-align: left; }
+
+/* util */
+.hidden { display: none !important; }
