@@ -54,7 +54,6 @@ onAuthStateChanged(auth, async (user) => {
 
     await loadGame();
 
-    // Start autosave every 20 minutes
     if (autosaveInterval) clearInterval(autosaveInterval);
     autosaveInterval = setInterval(async () => {
       await saveGame();
@@ -149,27 +148,27 @@ function setHeaderUsername(username) {
   if (el) el.textContent = username ? `[ ${username} ]` : `[ set username ]`;
 }
 
-// Called from the modal confirm button
 window.saveUsername = async () => {
   const input = document.getElementById("username-input");
   const msgEl = document.getElementById("username-message");
   const raw   = (input?.value || "").trim();
 
-  if (!raw) { msgEl.textContent = "Enter a username."; msgEl.className = "message error"; return; }
-  if (raw.length < 2) { msgEl.textContent = "At least 2 characters."; msgEl.className = "message error"; return; }
-  if (raw.length > 20) { msgEl.textContent = "Max 20 characters."; msgEl.className = "message error"; return; }
-  if (!/^[a-zA-Z0-9_\- ]+$/.test(raw)) { msgEl.textContent = "Letters, numbers, spaces, _ and - only."; msgEl.className = "message error"; return; }
+  if (!raw)          { msgEl.textContent = "Enter a username.";                 msgEl.className = "message error"; return; }
+  if (raw.length < 2){ msgEl.textContent = "At least 2 characters.";           msgEl.className = "message error"; return; }
+  if (raw.length > 20){ msgEl.textContent = "Max 20 characters.";              msgEl.className = "message error"; return; }
+  if (!/^[a-zA-Z0-9_\- ]+$/.test(raw)) {
+    msgEl.textContent = "Letters, numbers, spaces, _ and - only.";
+    msgEl.className = "message error";
+    return;
+  }
 
   msgEl.textContent = "Saving…"; msgEl.className = "message";
-
   try {
     await persistUsername(raw);
     setHeaderUsername(raw);
-    await saveGame(); // push updated username to leaderboard entry immediately
+    await saveGame();
     msgEl.textContent = "Saved!"; msgEl.className = "message success";
-    setTimeout(() => {
-      document.getElementById("username-modal").classList.add("hidden");
-    }, 800);
+    setTimeout(() => document.getElementById("username-modal").classList.add("hidden"), 800);
   } catch (e) {
     console.error(e);
     msgEl.textContent = "Save failed — try again."; msgEl.className = "message error";
@@ -186,25 +185,27 @@ window.saveGame = async () => {
   try {
     if (statusEl) { statusEl.textContent = "Saving…"; statusEl.className = "message"; }
 
-    const data = getSaveData(); // from game.js — already sanitised
-    await setDoc(doc(db, "saves", currentUser.uid), {
-      ...data,
-      savedAt: new Date().toISOString(),
-    });
-
-    // Update leaderboard entry
+    const data     = getSaveData();
     const score    = calcScore();
     const username = window._currentUsername || null;
-    await setDoc(doc(db, "leaderboard", currentUser.uid), {
-      uid:            currentUser.uid,
-      username,
-      score,
-      highestFitness: data.highestFitness  || 0,
-      generation:     data.generation      || 1,
-      totalBred:      data.totalBred       || 0,
-      totalCulled:    data.totalCulled     || 0,
-      updatedAt:      new Date().toISOString(),
-    });
+
+    // Write save and leaderboard entry in parallel
+    await Promise.all([
+      setDoc(doc(db, "saves", currentUser.uid), {
+        ...data,
+        savedAt: new Date().toISOString(),
+      }),
+      setDoc(doc(db, "leaderboard", currentUser.uid), {
+        uid:            currentUser.uid,
+        username,
+        score,
+        highestFitness: data.highestFitness  || 0,
+        generation:     data.generation      || 1,
+        totalBred:      data.totalBred       || 0,
+        totalCulled:    data.totalCulled     || 0,
+        updatedAt:      new Date().toISOString(),
+      }),
+    ]);
 
     if (statusEl) {
       statusEl.textContent = "Saved ✓";
@@ -220,15 +221,10 @@ window.saveGame = async () => {
 async function loadGame() {
   if (!currentUser) return;
   try {
-    // Load username first
     const username = await loadUsername();
     setHeaderUsername(username);
-    if (!username) {
-      // First login — show username modal after a short delay
-      setTimeout(() => openUsernameModal(), 600);
-    }
+    if (!username) setTimeout(() => openUsernameModal(), 600);
 
-    // Load save
     const snap = await getDoc(doc(db, "saves", currentUser.uid));
     if (snap.exists()) {
       applySaveData(snap.data());
@@ -246,11 +242,16 @@ async function loadGame() {
 
 // ═══════════════════════════════════════════════════════════
 //  LEADERBOARD
+//  Refresh: save the player's current state first so their
+//  own entry is always up to date before fetching the board.
 // ═══════════════════════════════════════════════════════════
 
 window.refreshLeaderboard = async () => {
   renderLeaderboardLoading();
   try {
+    // Save current state first so this player's row is current
+    await saveGame();
+
     const q    = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(25));
     const snap = await getDocs(q);
     const entries = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
@@ -258,7 +259,7 @@ window.refreshLeaderboard = async () => {
   } catch (e) {
     console.error("Leaderboard error:", e);
     const c = document.getElementById("leaderboard-container");
-    if (c) c.innerHTML = '<p class="lb-empty">Could not load leaderboard. Check Firestore rules (see README).</p>';
+    if (c) c.innerHTML = '<p class="lb-empty">Could not load leaderboard. Check Firestore rules.</p>';
   }
 };
 
