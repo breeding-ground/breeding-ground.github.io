@@ -12,14 +12,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  query,
-  orderBy,
-  limit,
-  getDocs,
+  doc, setDoc, getDoc,
+  collection, query, orderBy, limit, getDocs,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -55,7 +49,7 @@ onAuthStateChanged(auth, async (user) => {
     autosaveInterval = setInterval(async () => {
       await saveGame();
       flashAutosave();
-    }, 20 * 60 * 1000);
+    }, 5 * 60 * 1000); // ← 5 minutes
 
   } else {
     currentUser = null;
@@ -149,20 +143,18 @@ window.saveUsername = async () => {
   const input = document.getElementById("username-input");
   const msgEl = document.getElementById("username-message");
   const raw   = (input?.value || "").trim();
-
   if (!raw)            { msgEl.textContent = "Enter a username.";                  msgEl.className = "message error"; return; }
   if (raw.length < 2)  { msgEl.textContent = "At least 2 characters.";            msgEl.className = "message error"; return; }
   if (raw.length > 20) { msgEl.textContent = "Max 20 characters.";                msgEl.className = "message error"; return; }
   if (!/^[a-zA-Z0-9_\- ]+$/.test(raw)) {
     msgEl.textContent = "Letters, numbers, spaces, _ and - only.";
-    msgEl.className = "message error";
-    return;
+    msgEl.className = "message error"; return;
   }
-
   msgEl.textContent = "Saving…"; msgEl.className = "message";
   try {
     await persistUsername(raw);
     setHeaderUsername(raw);
+    if (window.notifyUsernameSet) window.notifyUsernameSet();
     await saveGame();
     msgEl.textContent = "Saved!"; msgEl.className = "message success";
     setTimeout(() => document.getElementById("username-modal").classList.add("hidden"), 800);
@@ -181,32 +173,23 @@ window.saveGame = async () => {
   const statusEl = document.getElementById("save-status");
   try {
     if (statusEl) { statusEl.textContent = "Saving…"; statusEl.className = "message"; }
-
     const data     = getSaveData();
     const score    = calcScore();
     const username = window._currentUsername || null;
-
     await Promise.all([
-      setDoc(doc(db, "saves", currentUser.uid), {
-        ...data,
-        savedAt: new Date().toISOString(),
-      }),
+      setDoc(doc(db, "saves", currentUser.uid), { ...data, savedAt: new Date().toISOString() }),
       setDoc(doc(db, "leaderboard", currentUser.uid), {
-        uid:                 currentUser.uid,
-        username,
-        score,
+        uid: currentUser.uid, username, score,
         highestFitness:      data.highestFitness      || 0,
         generation:          data.generation          || 1,
         totalBred:           data.totalBred           || 0,
         totalCulled:         data.totalCulled         || 0,
         totalDiamondsEarned: data.totalDiamondsEarned || 0,
-        updatedAt:           new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }),
     ]);
-
     if (statusEl) {
-      statusEl.textContent = "Saved ✓";
-      statusEl.className   = "message success";
+      statusEl.textContent = "Saved ✓"; statusEl.className = "message success";
       setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 3000);
     }
   } catch (e) {
@@ -221,7 +204,6 @@ async function loadGame() {
     const username = await loadUsername();
     setHeaderUsername(username);
     if (!username) setTimeout(() => openUsernameModal(), 600);
-
     const snap = await getDoc(doc(db, "saves", currentUser.uid));
     if (snap.exists()) {
       applySaveData(snap.data());
