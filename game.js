@@ -523,6 +523,11 @@ function _doBreed(pA,pB,targeted=false,silent=false){
   if(state.population.length>safeNum(state.maxPopEver))state.maxPopEver=state.population.length;
   const ry=researchBreedYield();if(ry>0){state.diamondBuffer=safeNum(state.diamondBuffer)+ry;flushDiamondBuffer();}
   tickArchivists();checkEverBroke();
+  // 1 GP every 100 generations
+  if(state.generation%100===0){
+    state.genePoints++;
+    addLog(`🧪 Generation ${fmt(state.generation)} — +1 Gene Point`,'gp');
+  }
   if(silent){
     autoBredTotal++;state.autoOnlyBreeds=safeNum(state.autoOnlyBreeds)+1;
     if(fitness>safeNum(state.highestFitness)){state.highestFitness=fitness;addLog(`Auto: Gen ${fmt(state.generation)} NEW RECORD fitness ${fmt(fitness)}!`,'highlight');}
@@ -532,7 +537,18 @@ function _doBreed(pA,pB,targeted=false,silent=false){
     if(fitness>safeNum(state.highestFitness)){state.highestFitness=fitness;addLog(`${targeted?'TARGETED ':''}Gen ${fmt(state.generation)}: ${child.id} — NEW RECORD fitness ${fmt(fitness)}! [${ts2}]`,'highlight');}
     else addLog(`${targeted?'Targeted — ':''}Gen ${fmt(state.generation)}: ${child.id} born [${ts2}] → fitness ${fmt(fitness)}`);
   }
-  checkMilestones();renderAll();
+  checkMilestones();
+  if(silent){
+    // During auto-breed: only update stats + active tab if it's not upgrades/research
+    // This prevents the DOM being torn down while the player is hovering over buttons
+    renderStats();
+    if(currentTab==='population')renderPopulation();
+    if(currentTab==='milestones')renderMilestones();
+    if(currentTab==='vault')renderGeneVault();
+    if(currentTab==='combat')renderCombat();
+  } else {
+    renderAll();
+  }
 }
 
 window.cullWeakest=()=>{
@@ -611,6 +627,7 @@ window.buyCombatSlot=(slots)=>{
 window.openImmortalModal=(id)=>{
   const c=state.population.find(x=>x.id===id);if(!c)return;
   if(!canImmortalise(c))return addLog(`${c.id} needs fitness ${IMMORTAL_THRESHOLD} to immortalise (has ${calcFitness(c)}).`,'warn');
+  if(state.population.length<=3)return addLog(`You need at least 4 creatures alive to immortalise one — otherwise you'd be left with only ${state.population.length-1}. Keep breeding first.`,'warn');
   pendingImmortalId=id;
   document.getElementById('immortal-name-input').value='';
   document.getElementById('immortal-name-message').textContent='';
@@ -923,7 +940,7 @@ function renderPopulation(){
     html+=`<table><thead><tr>${hasSel?'<th></th>':''}<th>ID</th><th>GEN</th><th>FIT</th>${TRAIT_ABR.map(a=>`<th>${a}</th>`).join('')}<th></th></tr></thead><tbody>`;
     sorted.forEach((c,i)=>{
       const isTop=i===0,isBot=i===sorted.length-1&&sorted.length>2,isSel=selectedForBreeding.includes(c.id);
-      const canImm=canImmortalise(c);
+      const canImm=canImmortalise(c)&&state.population.length>3;
       html+=`<tr class="${isTop?'row-top':isBot?'row-bottom':isSel?'row-selected':''}">`;
       if(hasSel)html+=`<td><button class="sel-btn ${isSel?'sel-active':''}" onclick="toggleSelect('${c.id}')">${isSel?'★':'☆'}</button></td>`;
       html+=`<td class="bright">${c.id}</td><td>${fmt(safeNum(c.generation,'?'))}</td><td class="fit-val">${fmt(c._f)}</td>`;
