@@ -139,60 +139,73 @@ const COMBAT_SLOT_UPGRADES=[
 
 // ═══════════════════════════════════════════════════════════
 //  PvE STAGES — 37 total
-//  iconR only at bosses: stages 10, 20, 30, 37
+//  Acts designed around skill investment:
+//  Act 1 (lv1-6): solo, 0-3 GP. Act 2 (lv6-10): tier1-2 skills or 2 fighters.
+//  Act 3 (lv9-15): tier2-3 + 2 fighters. Act 4 (lv14-20): near-maxed + 2-3 fighters.
+//  Boss icons ONLY at stages 10, 20, 30, 37.
 // ═══════════════════════════════════════════════════════════
 const PVE_STAGES=[
-  // ACT 1 — The Awakening
-  {id:'pve1', act:1,name:'The Proving Ground',   desc:'Your first opponent. A weak specimen bred for testing.',enemies:1,eLevel:1, gpR:2, iconR:null,boss:false},
-  {id:'pve2', act:1,name:'Twin Threat',           desc:'Two opponents at once. Learn to manage your attacks carefully.',enemies:2,eLevel:1, gpR:2, iconR:null,boss:false},
-  {id:'pve3', act:1,name:'The Gauntlet',          desc:'Three foes of growing strength. Your first real challenge.',enemies:3,eLevel:2, gpR:3, iconR:null,boss:false},
-  {id:'pve4', act:1,name:'Elite Specimen',        desc:'A single elite champion. Do not underestimate them.',enemies:1,eLevel:4, gpR:3, iconR:null,boss:false},
-  {id:'pve5', act:1,name:'Pack Hunt',             desc:'A coordinated pack. Speed wins here.',enemies:3,eLevel:3, gpR:4, iconR:null,boss:false},
-  {id:'pve6', act:1,name:'The Colosseum',         desc:'Two apex predators bred for the arena.',enemies:2,eLevel:5, gpR:4, iconR:null,boss:false},
-  {id:'pve7', act:1,name:'Ancient Bloodline',     desc:'A creature of ancient genetic heritage.',enemies:1,eLevel:7, gpR:5, iconR:null,boss:false},
-  {id:'pve8', act:1,name:'The Horde',             desc:'Four opponents simultaneously. Pure chaos.',enemies:4,eLevel:4, gpR:5, iconR:null,boss:false},
-  {id:'pve9', act:1,name:'Omega Trial',           desc:'Three Omega-class specimens. The hardest Act 1 test.',enemies:3,eLevel:7, gpR:6, iconR:null,boss:false},
-  {id:'pve10',act:1,name:'⚔ BOSS: First Reckoning',desc:'The end of Act 1. One perfect specimen. Defeat it to claim the first boss icon.',enemies:1,eLevel:12,gpR:10,iconR:'🩸',boss:true},
-  // ACT 2 — The Arena
-  {id:'pve11',act:2,name:"Veteran's Arena",       desc:'Seasoned warriors hardened by combat.',enemies:2,eLevel:9, gpR:6, iconR:null,boss:false},
-  {id:'pve12',act:2,name:'Blood Sport',           desc:'Three gladiators bred purely for killing.',enemies:3,eLevel:9, gpR:7, iconR:null,boss:false},
-  {id:'pve13',act:2,name:'Elite Squad',           desc:'Four elite units fighting in formation.',enemies:4,eLevel:10,gpR:8, iconR:null,boss:false},
-  {id:'pve14',act:2,name:'The Apex',              desc:'One supremely optimised specimen.',enemies:1,eLevel:14,gpR:8, iconR:null,boss:false},
-  {id:'pve15',act:2,name:'Coordinated Strike',    desc:'Three enemies that attack in perfect unison.',enemies:3,eLevel:11,gpR:9, iconR:null,boss:false},
-  {id:'pve16',act:2,name:'Grand Tournament',      desc:'Five opponents in sequence. Prove your endurance.',enemies:5,eLevel:10,gpR:10,iconR:null,boss:false},
-  {id:'pve17',act:2,name:'Twin Champions',        desc:'Two individually powerful champions.',enemies:2,eLevel:14,gpR:10,iconR:null,boss:false},
-  {id:'pve18',act:2,name:'The Infinite Horde',    desc:'Six opponents at once. Overwhelming numbers.',enemies:6,eLevel:9, gpR:11,iconR:null,boss:false},
-  {id:'pve19',act:2,name:'Legacy of Blood',       desc:'Three specimens descended from legendary lineages.',enemies:3,eLevel:15,gpR:12,iconR:null,boss:false},
-  {id:'pve20',act:2,name:'👁 BOSS: The Reaper',   desc:'The end of Act 2. An ancient reaper of unmatched speed. Claim the second boss icon.',enemies:1,eLevel:20,gpR:15,iconR:'👁️',boss:true},
-  // ACT 3 — The Pantheon
-  {id:'pve21',act:3,name:'Platinum Arena',        desc:'Only the most refined specimens compete here.',enemies:2,eLevel:17,gpR:10,iconR:null,boss:false},
-  {id:'pve22',act:3,name:'Ancient Legion',        desc:'Four warriors from an ancient martial bloodline.',enemies:4,eLevel:16,gpR:11,iconR:null,boss:false},
-  {id:'pve23',act:3,name:'Perfect Specimens',     desc:'Three creatures representing genetic near-perfection.',enemies:3,eLevel:19,gpR:12,iconR:null,boss:false},
-  {id:'pve24',act:3,name:'The Pantheon',          desc:'Five champions who have never been defeated.',enemies:5,eLevel:17,gpR:13,iconR:null,boss:false},
-  {id:'pve25',act:3,name:'Legendary Pack',        desc:'Four apex predators moving as a coordinated unit.',enemies:4,eLevel:20,gpR:14,iconR:null,boss:false},
-  {id:'pve26',act:3,name:'Twin Titans',           desc:'Two colossal specimens of extraordinary power.',enemies:2,eLevel:25,gpR:15,iconR:null,boss:false},
-  {id:'pve27',act:3,name:'The Last Army',         desc:'Six enemies — remnants of a legendary warband.',enemies:6,eLevel:18,gpR:15,iconR:null,boss:false},
-  {id:'pve28',act:3,name:'Omega Division',        desc:'Three Omega-class elites. Twice as formidable as before.',enemies:3,eLevel:25,gpR:16,iconR:null,boss:false},
-  {id:'pve29',act:3,name:'The Gauntlet Returns',  desc:'Five strong opponents with no respite between.',enemies:5,eLevel:22,gpR:18,iconR:null,boss:false},
-  {id:'pve30',act:3,name:'💀 BOSS: The Ancient One',desc:'The end of Act 3. A creature evolved beyond conventional limits.',enemies:1,eLevel:35,gpR:20,iconR:'💀',boss:true},
-  // ACT 4 — The Final War
-  {id:'pve31',act:4,name:'War Room',              desc:'Three elite tacticians with devastating synergy.',enemies:3,eLevel:30,gpR:15,iconR:null,boss:false},
-  {id:'pve32',act:4,name:'The Immortal Threat',   desc:'Four creatures that refuse to stay down.',enemies:4,eLevel:32,gpR:16,iconR:null,boss:false},
-  {id:'pve33',act:4,name:'Final Legion',          desc:'Five legendary soldiers in their finest hour.',enemies:5,eLevel:30,gpR:18,iconR:null,boss:false},
-  {id:'pve34',act:4,name:'The Convergence',       desc:'Two perfect specimens — the pinnacle of separate lineages.',enemies:2,eLevel:40,gpR:20,iconR:null,boss:false},
-  {id:'pve35',act:4,name:'Omega Prime',           desc:'Three Omega Prime specimens. The absolute highest tier.',enemies:3,eLevel:40,gpR:22,iconR:null,boss:false},
-  {id:'pve36',act:4,name:'The Last Trial',        desc:'Four enemies at the peak of their power.',enemies:4,eLevel:45,gpR:25,iconR:null,boss:false},
-  {id:'pve37',act:4,name:'🌑 BOSS: Eternal Champion',desc:'Never defeated. Never tired. The final boss. Claim the ultimate icon.',enemies:1,eLevel:60,gpR:50,iconR:'🌑',boss:true},
+  // ACT 1 — The Awakening (fresh immortal, minimal skills)
+  {id:'pve1', act:1,name:'The Proving Ground',     desc:'Your first opponent. A weak specimen bred for testing.',               enemies:1,eLevel:1, gpR:2,  iconR:null, boss:false},
+  {id:'pve2', act:1,name:'Twin Threat',             desc:'Two opponents at once. Learn to manage your attacks.',                 enemies:2,eLevel:1, gpR:2,  iconR:null, boss:false},
+  {id:'pve3', act:1,name:'The Gauntlet',            desc:'Three foes of growing strength.',                                     enemies:3,eLevel:2, gpR:3,  iconR:null, boss:false},
+  {id:'pve4', act:1,name:'Elite Specimen',          desc:'A single stronger opponent. A step up from what you know.',           enemies:1,eLevel:2, gpR:3,  iconR:null, boss:false},
+  {id:'pve5', act:1,name:'Pack Hunt',               desc:'Three opponents — speed and aggression.',                             enemies:3,eLevel:3, gpR:3,  iconR:null, boss:false},
+  {id:'pve6', act:1,name:'The Colosseum',           desc:'Two tougher predators bred for the arena.',                           enemies:2,eLevel:3, gpR:4,  iconR:null, boss:false},
+  {id:'pve7', act:1,name:'Ancient Bloodline',       desc:'A single specimen of ancient heritage. More powerful than it looks.', enemies:1,eLevel:4, gpR:4,  iconR:null, boss:false},
+  {id:'pve8', act:1,name:'The Horde',               desc:'Four opponents at once. Your first taste of chaos.',                  enemies:4,eLevel:3, gpR:5,  iconR:null, boss:false},
+  {id:'pve9', act:1,name:'Omega Trial',             desc:'Three level-5 opponents. The hardest Act 1 test before the boss.',    enemies:3,eLevel:5, gpR:6,  iconR:null, boss:false},
+  {id:'pve10',act:1,name:'⚔ BOSS: First Reckoning', desc:'End of Act 1. One elite champion. A fresh immortal can win — just.',enemies:1,eLevel:6, gpR:10, iconR:'🩸', boss:true},
+  // ACT 2 — The Arena (needs tier 1-2 skills, or 2 fighters)
+  {id:'pve11',act:2,name:"Veteran's Arena",         desc:'Two seasoned warriors. Stronger than anything in Act 1.',             enemies:2,eLevel:6, gpR:6,  iconR:null, boss:false},
+  {id:'pve12',act:2,name:'Blood Sport',             desc:'Three gladiators bred purely for killing.',                           enemies:3,eLevel:6, gpR:7,  iconR:null, boss:false},
+  {id:'pve13',act:2,name:'Elite Squad',             desc:'Four units. You will need skills now.',                               enemies:4,eLevel:7, gpR:8,  iconR:null, boss:false},
+  {id:'pve14',act:2,name:'The Apex',                desc:'One supremely optimised specimen. A wall of raw power.',              enemies:1,eLevel:8, gpR:8,  iconR:null, boss:false},
+  {id:'pve15',act:2,name:'Coordinated Strike',      desc:'Three enemies attacking with devastating coordination.',              enemies:3,eLevel:7, gpR:9,  iconR:null, boss:false},
+  {id:'pve16',act:2,name:'Grand Tournament',        desc:'Five opponents. Endurance is everything.',                            enemies:5,eLevel:7, gpR:10, iconR:null, boss:false},
+  {id:'pve17',act:2,name:'Twin Champions',          desc:'Two individually powerful champions. Neither will go down easy.',     enemies:2,eLevel:9, gpR:10, iconR:null, boss:false},
+  {id:'pve18',act:2,name:'The Infinite Horde',      desc:'Six opponents — numbers designed to overwhelm.',                     enemies:6,eLevel:7, gpR:11, iconR:null, boss:false},
+  {id:'pve19',act:2,name:'Legacy of Blood',         desc:'Three specimens from legendary lineages. Faster and harder.',         enemies:3,eLevel:9, gpR:12, iconR:null, boss:false},
+  {id:'pve20',act:2,name:'👁 BOSS: The Reaper',     desc:'End of Act 2. Blazing speed. A second fighter is strongly advised.', enemies:1,eLevel:10,gpR:15, iconR:'👁️', boss:true},
+  // ACT 3 — The Pantheon (needs tier 2-3 skills + 2 fighters)
+  {id:'pve21',act:3,name:'Platinum Arena',          desc:'Two powerful specimens. Act 3 begins in earnest.',                   enemies:2,eLevel:10,gpR:10, iconR:null, boss:false},
+  {id:'pve22',act:3,name:'Ancient Legion',          desc:'Four warriors from an ancient martial bloodline.',                    enemies:4,eLevel:10,gpR:11, iconR:null, boss:false},
+  {id:'pve23',act:3,name:'Perfect Specimens',       desc:'Three creatures approaching genetic perfection.',                     enemies:3,eLevel:11,gpR:12, iconR:null, boss:false},
+  {id:'pve24',act:3,name:'The Pantheon',            desc:'Five champions. Never defeated before today.',                       enemies:5,eLevel:11,gpR:13, iconR:null, boss:false},
+  {id:'pve25',act:3,name:'Legendary Pack',          desc:'Four apex predators moving as a coordinated unit.',                  enemies:4,eLevel:12,gpR:14, iconR:null, boss:false},
+  {id:'pve26',act:3,name:'Twin Titans',             desc:'Two colossal specimens of extraordinary individual power.',           enemies:2,eLevel:13,gpR:15, iconR:null, boss:false},
+  {id:'pve27',act:3,name:'The Last Army',           desc:'Six enemies — remnants of a legendary warband.',                     enemies:6,eLevel:11,gpR:15, iconR:null, boss:false},
+  {id:'pve28',act:3,name:'Omega Division',          desc:'Three Omega-class elites. The cracks in reality begin here.',        enemies:3,eLevel:13,gpR:16, iconR:null, boss:false},
+  {id:'pve29',act:3,name:'The Gauntlet Returns',    desc:'Five strong opponents. No breath between them.',                     enemies:5,eLevel:12,gpR:18, iconR:null, boss:false},
+  {id:'pve30',act:3,name:'💀 BOSS: The Ancient One', desc:'End of Act 3. Evolved beyond limits. Bring 2 fighters or suffer.', enemies:1,eLevel:15,gpR:20, iconR:'💀', boss:true},
+  // ACT 4 — The Final War (near-maxed skills + 2-3 fighters required)
+  {id:'pve31',act:4,name:'War Room',                desc:'Three elite tacticians. Act 4 is a different league entirely.',      enemies:3,eLevel:14,gpR:15, iconR:null, boss:false},
+  {id:'pve32',act:4,name:'The Immortal Threat',     desc:'Four creatures that refuse to yield. Attrition warfare.',            enemies:4,eLevel:15,gpR:16, iconR:null, boss:false},
+  {id:'pve33',act:4,name:'Final Legion',            desc:'Five legendary soldiers at their absolute peak.',                    enemies:5,eLevel:15,gpR:18, iconR:null, boss:false},
+  {id:'pve34',act:4,name:'The Convergence',         desc:'Two perfect specimens — the pinnacle of two separate lineages.',     enemies:2,eLevel:17,gpR:20, iconR:null, boss:false},
+  {id:'pve35',act:4,name:'Omega Prime',             desc:'Three Omega Prime specimens. The highest tier known.',               enemies:3,eLevel:17,gpR:22, iconR:null, boss:false},
+  {id:'pve36',act:4,name:'The Last Trial',          desc:'Four enemies at maximum power. One final preparation.',              enemies:4,eLevel:18,gpR:25, iconR:null, boss:false},
+  {id:'pve37',act:4,name:'🌑 BOSS: Eternal Champion',desc:'Never defeated. Never tired. Bring 3 fighters and your best skills.',enemies:1,eLevel:20,gpR:50, iconR:'🌑', boss:true},
 ];
 
 // ── Combat helpers ────────────────────────────────────────
+// Enemy formula — designed so a fresh immortal (ATK/SPD/DEF 125, HP 200) can beat level 1-5,
+// and maxed immortals with 3 fighters are needed for level 20 (final boss).
+// ATK = 30+level*9, SPD = 25+level*8, DEF = 20+level*9, HP = 120+level*38
+// Crits appear at level 13+, dodge at 16+, regen at 19+
 function makePveEnemy(level,idx=0){
-  const base=80+level*30;
   const names=['Predator','Apex','Champion','Titan','Omega','Reaper','Ancient','Berserker','Phantom','Colossus'];
-  const v=base+rand(-8,8);
-  return{atk:v,spd:Math.max(30,v-10-idx*4),def:Math.max(20,v-18),hp:BASE_HP+level*45,
-         crit:level>=15?0.15:0,dodge:level>=20?0.10:0,regen:level>=25?Math.floor(level*1.5):0,
-         name:`${names[idx%names.length]} ${String.fromCharCode(65+idx)}`};
+  const jitter=rand(-5,5);
+  return{
+    atk: Math.max(10, 30+level*9+jitter),
+    spd: Math.max(10, 25+level*8+Math.floor(jitter/2)-idx*3),
+    def: Math.max(5,  20+level*9+jitter),
+    hp:  120+level*38,
+    crit:  level>=13 ? 0.15 : 0,
+    dodge: level>=16 ? 0.10 : 0,
+    regen: level>=19 ? level : 0,
+    name:`${names[idx%names.length]} ${String.fromCharCode(65+idx)}`,
+  };
 }
 
 function simulateFight(atkTeam,defTeam){
