@@ -1,7 +1,6 @@
 // ============================================================
-//  auth.js  —  Firebase Auth + Firestore + Autosave
+//  auth.js  —  Firebase Auth + Firestore + Autosave + Leaderboard
 //  Replace the firebaseConfig block below with your own config
-//  from Firebase console → Project Settings → Your apps
 // ============================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -17,6 +16,11 @@ import {
   doc,
   setDoc,
   getDoc,
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── 🔧 REPLACE THIS WITH YOUR FIREBASE CONFIG ──────────────
@@ -34,10 +38,13 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-let currentUser       = null;
-let autosaveInterval  = null;
+let currentUser      = null;
+let autosaveInterval = null;
 
-// ── Auth state watcher ───────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  AUTH STATE
+// ═══════════════════════════════════════════════════════════
+
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
@@ -62,7 +69,6 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ── Autosave flash ───────────────────────────────────────────
 function flashAutosave() {
   const el = document.getElementById("autosave-flash");
   if (!el) return;
@@ -71,7 +77,10 @@ function flashAutosave() {
   setTimeout(() => el.classList.remove("visible"), 3000);
 }
 
-// ── Auth UI ──────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  AUTH UI
+// ═══════════════════════════════════════════════════════════
+
 window.showTab = (tab) => {
   document.getElementById("login-form").classList.toggle("hidden",    tab !== "login");
   document.getElementById("register-form").classList.toggle("hidden", tab !== "register");
@@ -84,71 +93,142 @@ window.showTab = (tab) => {
 };
 
 function setAuthMsg(msg, type = "") {
-  const el     = document.getElementById("auth-message");
+  const el = document.getElementById("auth-message");
   el.textContent = msg;
   el.className   = "message" + (type ? ` ${type}` : "");
 }
 
-// ── Register ─────────────────────────────────────────────────
 window.register = async () => {
   const email   = document.getElementById("reg-email").value.trim();
   const pw      = document.getElementById("reg-password").value;
   const confirm = document.getElementById("reg-confirm").value;
-
-  if (!email || !pw)    return setAuthMsg("Fill in all fields.", "error");
-  if (pw !== confirm)   return setAuthMsg("Passwords don't match.", "error");
-  if (pw.length < 6)    return setAuthMsg("Password needs at least 6 characters.", "error");
-
+  if (!email || !pw)  return setAuthMsg("Fill in all fields.", "error");
+  if (pw !== confirm) return setAuthMsg("Passwords don't match.", "error");
+  if (pw.length < 6)  return setAuthMsg("Password needs at least 6 characters.", "error");
   try {
     setAuthMsg("Creating account…");
     await createUserWithEmailAndPassword(auth, email, pw);
   } catch (e) { setAuthMsg(friendlyErr(e.code), "error"); }
 };
 
-// ── Login ─────────────────────────────────────────────────────
 window.login = async () => {
   const email = document.getElementById("login-email").value.trim();
   const pw    = document.getElementById("login-password").value;
-
   if (!email || !pw) return setAuthMsg("Fill in all fields.", "error");
-
   try {
     setAuthMsg("Logging in…");
     await signInWithEmailAndPassword(auth, email, pw);
   } catch (e) { setAuthMsg(friendlyErr(e.code), "error"); }
 };
 
-// ── Logout ───────────────────────────────────────────────────
 window.logout = async () => {
   await saveGame();
   await signOut(auth);
 };
 
-// ── Save to Firestore ────────────────────────────────────────
-window.saveGame = async () => {
-  if (!currentUser) return;
-  const status = document.getElementById("save-status");
+// ═══════════════════════════════════════════════════════════
+//  USERNAME
+// ═══════════════════════════════════════════════════════════
+
+async function loadUsername() {
+  if (!currentUser) return null;
   try {
-    if (status) { status.textContent = "Saving…"; status.className = "message"; }
-    await setDoc(doc(db, "saves", currentUser.uid), {
-      ...getSaveData(),
-      savedAt: new Date().toISOString(),
-    });
-    if (status) {
-      status.textContent = "Saved ✓";
-      status.className   = "message success";
-      setTimeout(() => { if (status) status.textContent = ""; }, 3000);
-    }
+    const snap = await getDoc(doc(db, "users", currentUser.uid));
+    return snap.exists() ? snap.data().username || null : null;
+  } catch { return null; }
+}
+
+async function persistUsername(username) {
+  if (!currentUser) return;
+  await setDoc(doc(db, "users", currentUser.uid), { username }, { merge: true });
+}
+
+function setHeaderUsername(username) {
+  window._currentUsername = username || null;
+  const el = document.getElementById("header-username");
+  if (el) el.textContent = username ? `[ ${username} ]` : `[ set username ]`;
+}
+
+// Called from the modal confirm button
+window.saveUsername = async () => {
+  const input = document.getElementById("username-input");
+  const msgEl = document.getElementById("username-message");
+  const raw   = (input?.value || "").trim();
+
+  if (!raw) { msgEl.textContent = "Enter a username."; msgEl.className = "message error"; return; }
+  if (raw.length < 2) { msgEl.textContent = "At least 2 characters."; msgEl.className = "message error"; return; }
+  if (raw.length > 20) { msgEl.textContent = "Max 20 characters."; msgEl.className = "message error"; return; }
+  if (!/^[a-zA-Z0-9_\- ]+$/.test(raw)) { msgEl.textContent = "Letters, numbers, spaces, _ and - only."; msgEl.className = "message error"; return; }
+
+  msgEl.textContent = "Saving…"; msgEl.className = "message";
+
+  try {
+    await persistUsername(raw);
+    setHeaderUsername(raw);
+    await saveGame(); // push updated username to leaderboard entry immediately
+    msgEl.textContent = "Saved!"; msgEl.className = "message success";
+    setTimeout(() => {
+      document.getElementById("username-modal").classList.add("hidden");
+    }, 800);
   } catch (e) {
-    console.error("Save error:", e);
-    if (status) { status.textContent = "Save failed."; status.className = "message error"; }
+    console.error(e);
+    msgEl.textContent = "Save failed — try again."; msgEl.className = "message error";
   }
 };
 
-// ── Load from Firestore ──────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  SAVE & LOAD
+// ═══════════════════════════════════════════════════════════
+
+window.saveGame = async () => {
+  if (!currentUser) return;
+  const statusEl = document.getElementById("save-status");
+  try {
+    if (statusEl) { statusEl.textContent = "Saving…"; statusEl.className = "message"; }
+
+    const data = getSaveData(); // from game.js — already sanitised
+    await setDoc(doc(db, "saves", currentUser.uid), {
+      ...data,
+      savedAt: new Date().toISOString(),
+    });
+
+    // Update leaderboard entry
+    const score    = calcScore();
+    const username = window._currentUsername || null;
+    await setDoc(doc(db, "leaderboard", currentUser.uid), {
+      uid:            currentUser.uid,
+      username,
+      score,
+      highestFitness: data.highestFitness  || 0,
+      generation:     data.generation      || 1,
+      totalBred:      data.totalBred       || 0,
+      totalCulled:    data.totalCulled     || 0,
+      updatedAt:      new Date().toISOString(),
+    });
+
+    if (statusEl) {
+      statusEl.textContent = "Saved ✓";
+      statusEl.className   = "message success";
+      setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 3000);
+    }
+  } catch (e) {
+    console.error("Save error:", e);
+    if (statusEl) { statusEl.textContent = "Save failed."; statusEl.className = "message error"; }
+  }
+};
+
 async function loadGame() {
   if (!currentUser) return;
   try {
+    // Load username first
+    const username = await loadUsername();
+    setHeaderUsername(username);
+    if (!username) {
+      // First login — show username modal after a short delay
+      setTimeout(() => openUsernameModal(), 600);
+    }
+
+    // Load save
     const snap = await getDoc(doc(db, "saves", currentUser.uid));
     if (snap.exists()) {
       applySaveData(snap.data());
@@ -164,7 +244,28 @@ async function loadGame() {
   }
 }
 
-// ── Friendly error messages ──────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  LEADERBOARD
+// ═══════════════════════════════════════════════════════════
+
+window.refreshLeaderboard = async () => {
+  renderLeaderboardLoading();
+  try {
+    const q    = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(25));
+    const snap = await getDocs(q);
+    const entries = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    renderLeaderboard(entries, currentUser?.uid);
+  } catch (e) {
+    console.error("Leaderboard error:", e);
+    const c = document.getElementById("leaderboard-container");
+    if (c) c.innerHTML = '<p class="lb-empty">Could not load leaderboard. Check Firestore rules (see README).</p>';
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ERROR MESSAGES
+// ═══════════════════════════════════════════════════════════
+
 function friendlyErr(code) {
   const map = {
     "auth/email-already-in-use":   "That email is already registered.",
@@ -176,7 +277,5 @@ function friendlyErr(code) {
     "auth/too-many-requests":      "Too many attempts — try again later.",
     "auth/network-request-failed": "Network error. Check your connection.",
   };
-  return map[code] || `Error: ${code}`;
-}
   return map[code] || `Error: ${code}`;
 }
