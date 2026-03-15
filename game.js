@@ -283,6 +283,15 @@ const SECRET_MILESTONES=[
 ];
 
 // ═══════════════════════════════════════════════════════════
+// Assign diamond rewards to each tier: scales 1→5 across each track, secrets get 3
+MILESTONE_TRACKS.forEach(track=>{
+  const n=track.tiers.length;
+  track.tiers.forEach((tier,i)=>{
+    if(tier.dia===undefined) tier.dia=Math.max(1,Math.round(1+(4*(i/(Math.max(n-1,1))))));
+  });
+});
+SECRET_MILESTONES.forEach(m=>{ if(m.dia===undefined) m.dia=3; });
+
 //  STATE
 // ═══════════════════════════════════════════════════════════
 let state={};
@@ -793,16 +802,22 @@ function checkMilestones(){
     track.tiers.forEach(tier=>{
       if(state.completedMilestones.includes(tier.id)||val<tier.target)return;
       state.completedMilestones.push(tier.id);state.milestoneDiamondsAwarded.push(tier.id);
-      const gp=tier.gp||1;if(gp>0)state.genePoints+=gp;
-      if(gp>0)addLog(`🧪 [${track.name}]: "${tier.name}" +${gp}🧪`,'gp');
-      else addLog(`✓ [${track.name}]: "${tier.name}"`,'highlight');
+      const gp=tier.gp||1;
+      const dia=tier.dia||1;
+      if(gp>0)state.genePoints+=gp;
+      if(dia>0){state.diamonds+=dia;state.totalDiamondsEarned+=dia;}
+      const reward=(dia>0?`+${dia}💎 `:'')+( gp>0?`+${gp}🧪`:'');
+      addLog(`💎 [${track.name}]: "${tier.name}" ${reward}`,'diamond');
     });
   });
   SECRET_MILESTONES.forEach(m=>{
     if(state.completedMilestones.includes(m.id)||!m.check(state))return;
     state.completedMilestones.push(m.id);state.milestoneDiamondsAwarded.push(m.id);
-    const gp=m.gp||5;state.genePoints+=gp;
-    addLog(`🧪 Secret: "${m.name}" +${gp}🧪`,'gp');
+    const gp=m.gp||5;
+    const dia=m.dia||3;
+    state.genePoints+=gp;
+    if(dia>0){state.diamonds+=dia;state.totalDiamondsEarned+=dia;}
+    addLog(`💎 Secret: "${m.name}" +${dia}💎 +${gp}🧪`,'diamond');
   });
 }
 
@@ -1111,17 +1126,18 @@ function renderMilestones(){
     if(!allDone&&prog.nxt){
       const pv=Math.round(prog.pct*100);
       html+=`<div class="track-next-name">→ ${prog.nxt.name} at ${fmt(prog.nxt.target)} ${track.unit}</div>`;
-      html+=`<div class="track-prog-wrap"><div class="track-prog-bar"><div class="track-prog-fill" style="width:${pv}%"></div></div><div class="track-prog-text"><span>${fmt(prog.val)} / ${fmt(prog.nxt.target)}</span><span class="reward">${prog.nxt.gp>0?'+'+prog.nxt.gp+'🧪':''}</span></div></div>`;
+      html+=`<div class="track-prog-wrap"><div class="track-prog-bar"><div class="track-prog-fill" style="width:${pv}%"></div></div><div class="track-prog-text"><span>${fmt(prog.val)} / ${fmt(prog.nxt.target)}</span><span class="reward">${prog.nxt.dia>0?'+'+prog.nxt.dia+'💎 ':''}${prog.nxt.gp>0?'+'+prog.nxt.gp+'🧪':''}</span></div></div>`;
     } else if(allDone){html+=`<div class="track-complete-badge">✦ ALL TIERS COMPLETE</div>`;}
     html+=`<div class="track-dots">`;
     prog.tot>0&&[...Array(prog.tot)].forEach((_,i)=>{html+=`<div class="track-dot ${i<=prog.ci?'filled':i===prog.ci+1?'current':''}"></div>`;});
     html+=`</div></div></div>`;
   });
-  html+=`<p class="ms-cat-title secret-title">// ??? SECRETS — +5🧪 each</p><div class="secret-grid">`;
+  html+=`<p class="ms-cat-title secret-title">// ??? SECRETS — +💎 +5🧪 each</p><div class="secret-grid">`;
   SECRET_MILESTONES.forEach(m=>{
     const isDone=state.completedMilestones.includes(m.id);
-    if(!isDone)html+=`<div class="ms-card ms-secret"><div class="ms-name">???</div><div class="ms-reward">+5🧪</div></div>`;
-    else html+=`<div class="ms-card ms-done-secret"><div class="ms-check secret-check">✓</div><div class="ms-name">${m.name}</div><div class="ms-desc">${m.desc}</div><div class="ms-reward">+5🧪</div></div>`;
+    const dia=m.dia||3;
+    if(!isDone)html+=`<div class="ms-card ms-secret"><div class="ms-name">???</div><div class="ms-reward">+${dia}💎 +5🧪</div></div>`;
+    else html+=`<div class="ms-card ms-done-secret"><div class="ms-check secret-check">✓</div><div class="ms-name">${m.name}</div><div class="ms-desc">${m.desc}</div><div class="ms-reward">+${dia}💎 +5🧪</div></div>`;
   });
   html+=`</div>`;
   c.innerHTML=html;
