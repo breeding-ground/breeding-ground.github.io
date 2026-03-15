@@ -397,18 +397,4 @@ h2:first-child { margin-top:0; }
 
 .hidden { display:none !important; }
 
-/* ── DARWIN QUOTE ───────────────────────────────────────────── */
-#darwin-quote {
-  position:fixed; bottom:16px; left:16px;
-  max-width:320px; z-index:9999;
-  pointer-events:none;
-  display:flex; flex-direction:column; gap:4px;
-}
-.darwin-text {
-  color:#aaaaaa; font-size:11px; line-height:1.6;
-  font-style:italic; font-family:'Courier New',Courier,monospace;
-}
-.darwin-attr {
-  color:#777777; font-size:10px; letter-spacing:1px;
-  font-family:'Courier New',Courier,monospace;
-}
+.hidden { display:none !important; }
