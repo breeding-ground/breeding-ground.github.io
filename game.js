@@ -44,6 +44,8 @@ const DIAMOND_UPGRADES=[
    levels:[{cost:8,label:'Lv1—halves ≥30'},{cost:18,label:'Lv2—removes'},{cost:40,label:'Lv3—+1 guaranteed'}]},
   {id:'deepArchive',name:'Deep Archive',desc:'Lineage Memory recalls best+bonus.',
    levels:[{cost:15,label:'Lv1—best+1'},{cost:35,label:'Lv2—best+2'}]},
+  {id:'secretDecoder',name:'Secret Decoder',desc:'Reveals the hint for every secret milestone — names stay hidden until earned.',
+   levels:[{cost:1000000,label:'One-time — reveals all secret hints'}]},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -459,7 +461,7 @@ function defaultState(){
     vault_predator_opens:0,vault_ancient_opens:0,vault_machine_opens:0,
     immortals:[],combatSlots:1,pveCompleted:[],pveAct2Completed:[],pvpWins:0,pvpLosses:0,combatLog:[],
     research:{labInterns:0,geneAnalysts:0,lineageArchivists:0,headOfResearch:false,automatedSequencer:false},
-    upgrades:{popCap:0,mutation:0,traitAmp:0,breedYield:0,cullValue:0,selective:0,cullInsight:0,lineageMem:0,hybridVigor:0,adaptiveGenetics:0,autoBreeder:0,traitCapBoost:0,eliteMutation:0,deepArchive:0},
+    upgrades:{popCap:0,mutation:0,traitAmp:0,breedYield:0,cullValue:0,selective:0,cullInsight:0,lineageMem:0,hybridVigor:0,adaptiveGenetics:0,autoBreeder:0,traitCapBoost:0,eliteMutation:0,deepArchive:0,secretDecoder:0},
   };
 }
 
@@ -527,7 +529,7 @@ function sanitiseState(s){
     pvpWins:safeNum(s.pvpWins),pvpLosses:safeNum(s.pvpLosses),
     combatLog:Array.isArray(s.combatLog)?s.combatLog:[],
     research:{labInterns:safeNum(s.research?.labInterns),geneAnalysts:safeNum(s.research?.geneAnalysts),lineageArchivists:safeNum(s.research?.lineageArchivists),headOfResearch:!!s.research?.headOfResearch,automatedSequencer:!!s.research?.automatedSequencer},
-    upgrades:{popCap:safeNum(s.upgrades?.popCap),mutation:safeNum(s.upgrades?.mutation),traitAmp:safeNum(s.upgrades?.traitAmp),breedYield:safeNum(s.upgrades?.breedYield),cullValue:safeNum(s.upgrades?.cullValue),selective:safeNum(s.upgrades?.selective),cullInsight:safeNum(s.upgrades?.cullInsight),lineageMem:safeNum(s.upgrades?.lineageMem),hybridVigor:safeNum(s.upgrades?.hybridVigor),adaptiveGenetics:safeNum(s.upgrades?.adaptiveGenetics),autoBreeder:safeNum(s.upgrades?.autoBreeder),traitCapBoost:safeNum(s.upgrades?.traitCapBoost),eliteMutation:safeNum(s.upgrades?.eliteMutation),deepArchive:safeNum(s.upgrades?.deepArchive)},
+    upgrades:{popCap:safeNum(s.upgrades?.popCap),mutation:safeNum(s.upgrades?.mutation),traitAmp:safeNum(s.upgrades?.traitAmp),breedYield:safeNum(s.upgrades?.breedYield),cullValue:safeNum(s.upgrades?.cullValue),selective:safeNum(s.upgrades?.selective),cullInsight:safeNum(s.upgrades?.cullInsight),lineageMem:safeNum(s.upgrades?.lineageMem),hybridVigor:safeNum(s.upgrades?.hybridVigor),adaptiveGenetics:safeNum(s.upgrades?.adaptiveGenetics),autoBreeder:safeNum(s.upgrades?.autoBreeder),traitCapBoost:safeNum(s.upgrades?.traitCapBoost),eliteMutation:safeNum(s.upgrades?.eliteMutation),deepArchive:safeNum(s.upgrades?.deepArchive),secretDecoder:safeNum(s.upgrades?.secretDecoder)},
     population:(s.population||[]).map(migrateCrature).filter(Boolean),
   };
 }
@@ -1487,12 +1489,20 @@ function renderMilestones(){
     prog.tot>0&&[...Array(prog.tot)].forEach((_,i)=>{html+=`<div class="track-dot ${i<=prog.ci?'filled':i===prog.ci+1?'current':''}"></div>`;});
     html+=`</div></div></div>`;
   });
-  html+=`<p class="ms-cat-title secret-title">// ??? SECRETS — +💎 +5🧪 each</p><div class="secret-grid">`;
+  const hasDecoder=safeNum(state.upgrades?.secretDecoder)>0;
+  html+=`<p class="ms-cat-title secret-title">// ??? SECRETS — +💎 +5🧪 each${hasDecoder?' <span style="color:var(--diamond);font-size:9px">[DECODER ACTIVE]</span>':''}</p><div class="secret-grid">`;
   SECRET_MILESTONES.forEach(m=>{
     const isDone=state.completedMilestones.includes(m.id);
     const dia=m.dia||3;
-    if(!isDone)html+=`<div class="ms-card ms-secret"><div class="ms-name">???</div><div class="ms-reward">+${dia}💎 +5🧪</div></div>`;
-    else html+=`<div class="ms-card ms-done-secret"><div class="ms-check secret-check">✓</div><div class="ms-name">${m.name}</div><div class="ms-desc">${m.desc}</div><div class="ms-reward">+${dia}💎 +5🧪</div></div>`;
+    if(!isDone){
+      html+=`<div class="ms-card ms-secret">
+        <div class="ms-name">???</div>
+        ${hasDecoder?`<div class="ms-desc" style="color:var(--muted);font-size:10px;margin-bottom:4px">${m.desc}</div>`:''}
+        <div class="ms-reward">+${dia}💎 +5🧪</div>
+      </div>`;
+    } else {
+      html+=`<div class="ms-card ms-done-secret"><div class="ms-check secret-check">✓</div><div class="ms-name">${m.name}</div><div class="ms-desc">${m.desc}</div><div class="ms-reward">+${dia}💎 +5🧪</div></div>`;
+    }
   });
   html+=`</div>`;
   c.innerHTML=html;
