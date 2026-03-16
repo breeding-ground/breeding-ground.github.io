@@ -309,7 +309,10 @@ SECRET_MILESTONES.forEach(m=>{ if(m.dia===undefined) m.dia=3; });
 
 //  STATE
 // ═══════════════════════════════════════════════════════════
-let state={};
+let state={population:[],upgrades:{},research:{},completedMilestones:[],immortals:[],pveCompleted:[],ownedIcons:[],combatLog:[]};
+let _gameReady=false;
+function guardReady(){if(!_gameReady){addLog('Game still loading — please wait.','warn');return false;}return true;}
+
 let currentTab='log',selectedForBreeding=[],bestEverTraits={};
 let autoBreedInterval=null,autoBreederPaused=false,autoBredTotal=0;
 let pendingImmortalId=null,combatSubTab='pve';
@@ -363,7 +366,7 @@ window.getMilestoneCounts=getMilestoneCounts;
 window.calcScore=()=>Math.floor(
   (safeNum(state.highestFitness)*200+safeNum(state.generation)*10+
    safeNum(state.totalBred)*3+safeNum(state.totalCulled)*5+
-   safeNum(state.totalGoldEarned)+safeNum(state.totalDiamondsEarned)*100)/10
+   safeNum(state.totalGoldEarned)+safeNum(state.totalDiamondsEarned)*100)/100
 );
 
 function migrateCrature(c){
@@ -456,11 +459,13 @@ window.toggleAutoBreeder=()=>{autoBreederPaused=!autoBreederPaused;updateAutoBtn
 window.getSaveData=()=>sanitiseState(state);
 window.applySaveData=(data)=>{
   state=sanitiseState({...defaultState(),...data});
+  _gameReady=true;
   selectedForBreeding=[];rebuildBestEverTraits();migrateLegacyProgress();checkMilestones();
   startAutoBreeder();renderAll();
 };
 window.initNewGame=()=>{
   state=defaultState();state.population=Array.from({length:5},()=>makeCreature());
+  _gameReady=true;
   rebuildBestEverTraits();startAutoBreeder();renderAll();
 };
 window.notifyUsernameSet=()=>{if(!state.hasSetUsername){state.hasSetUsername=true;checkMilestones();renderAll();}};
@@ -510,6 +515,7 @@ function makeCreature(pA=null,pB=null){
 
 // ACTIONS
 window.breedCycle=()=>{
+  if(!guardReady())return;
   if(state.population.length<2)return addLog('Not enough creatures.','warn');
   if(state.population.length>=getMaxPop()){state.breedCapHits=safeNum(state.breedCapHits)+1;checkMilestones();return addLog(`Population cap (${fmt(getMaxPop())}) reached.`,'warn');}
   const[pA,pB]=[...state.population].sort(()=>Math.random()-0.5);
@@ -517,6 +523,7 @@ window.breedCycle=()=>{
 };
 
 window.breedSelected=()=>{
+  if(!guardReady())return;
   if(!safeNum(state.upgrades?.selective))return addLog('Selective Breeding upgrade required.','warn');
   if(selectedForBreeding.length!==2)return addLog('Select exactly 2 creatures.','warn');
   if(state.population.length>=getMaxPop()){state.breedCapHits=safeNum(state.breedCapHits)+1;checkMilestones();return addLog('Pop cap reached.','warn');}
@@ -568,6 +575,7 @@ function _doBreed(pA,pB,targeted=false,silent=false){
 }
 
 window.cullWeakest=()=>{
+  if(!guardReady())return;
   const minPop=2;
   if(state.population.length<=minPop)return addLog(`Pop too small (min ${minPop}).`,'warn');
   state.population.forEach(c=>{c._f=calcFitness(c);});
@@ -1202,7 +1210,7 @@ function renderGeneVault(){
   const c=document.getElementById('vault-container');if(!c)return;
   const owned=state.ownedIcons||[],sel=state.selectedIcon;
   const pveIconsOwned=PVE_BOSS_ICONS.filter(ic=>owned.includes(ic));
-  let html=`<p class="vault-intro">Collect icons to display on the leaderboard. Vault icons: 125. Boss icons from PvE: 4. Total: 129. Duplicates refund 10%.</p>`;
+  let html=`<p class="vault-intro">Collect icons to display on the leaderboard. Vault icons: 150. Boss icons from PvE: 4. Total: 154. Duplicates refund 10%.</p>`;
   html+=`<div class="vault-collection-section">`;
   html+=`<p class="vault-collection-title">// YOUR COLLECTION — ${fmt(owned.length)} / ${TOTAL_ICONS} icons</p>`;
   if(sel)html+=`<p class="vault-active-label">Active: <span>${sel}</span></p>`;
@@ -1244,10 +1252,10 @@ window.renderLeaderboard=(entries,currentUid)=>{
   }
   const currentTotal=getMilestoneCounts().total;
   let html=`<div class="lb-header"><span class="lb-title">// LEADERBOARD</span><button class="lb-refresh" onclick="window.refreshLeaderboard?.()">[ REFRESH ]</button></div>
-  <p class="lb-formula">Score = (<span>fitness×200</span> + <span>gen×10</span> + <span>bred×3</span> + <span>culled×5</span> + <span>gold</span> + <span>💎×100</span>) ÷ 10</p>`;
+  <p class="lb-formula">Score = (<span>fitness×200</span> + <span>gen×10</span> + <span>bred×3</span> + <span>culled×5</span> + <span>gold</span> + <span>💎×100</span>) ÷ 100</p>`;
   if(!entries?.length){html+=`<p class="lb-empty">No entries yet.</p>`;c.innerHTML=html;return;}
   const hasImmortals=!window.isGuest&&(state.immortals||[]).length>0;
-  const processed=entries.map(e=>({...e,displayScore:Math.floor((safeNum(e.rawFitness||e.highestFitness)*200+safeNum(e.rawGeneration||e.generation)*10+safeNum(e.rawTotalBred||e.totalBred)*3+safeNum(e.rawTotalCulled||e.totalCulled)*5+safeNum(e.rawTotalGoldEarned||e.totalGoldEarned)+safeNum(e.rawTotalDiamondsEarned||e.totalDiamondsEarned)*100)/10)})).sort((a,b)=>b.displayScore-a.displayScore);
+  const processed=entries.map(e=>({...e,displayScore:Math.floor((safeNum(e.rawFitness||e.highestFitness)*200+safeNum(e.rawGeneration||e.generation)*10+safeNum(e.rawTotalBred||e.totalBred)*3+safeNum(e.rawTotalCulled||e.totalCulled)*5+safeNum(e.rawTotalGoldEarned||e.totalGoldEarned)+safeNum(e.rawTotalDiamondsEarned||e.totalDiamondsEarned)*100)/100)})).sort((a,b)=>b.displayScore-a.displayScore);
   // Store targets in a global map so onclick never has to embed strings in HTML
   window._pvpTargets={};
   html+=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>SCORE</th><th>MILESTONES</th><th>GEN</th>${hasImmortals?'<th></th>':''}</tr></thead><tbody>`;
