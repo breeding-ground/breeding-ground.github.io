@@ -61,7 +61,7 @@ window.playAsGuest = () => {
   }
 
   if (autosaveInterval) clearInterval(autosaveInterval);
-  autosaveInterval = setInterval(() => { saveGame(); flashAutosave(); }, 3 * 60 * 1000);
+  autosaveInterval = setInterval(() => { saveGame(); flashAutosave(); }, 12 * 60 * 1000);
 };
 
 // ── SAVE ──────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById("guest-badge").classList.add("hidden");
     await loadGame();
     if (autosaveInterval) clearInterval(autosaveInterval);
-    autosaveInterval = setInterval(async () => { await saveGame(); flashAutosave(); }, 3 * 60 * 1000);
+    autosaveInterval = setInterval(async () => { await saveGame(); flashAutosave(); }, 12 * 60 * 1000);
     subscribeToChallenges();
   } else {
     currentUser = null;
