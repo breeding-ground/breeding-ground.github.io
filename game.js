@@ -420,6 +420,7 @@ const SECRET_MILESTONES=[
   {id:'ms_s_vault_max', name:'Hoarder Supreme',    desc:'Fully collect all 25 icons from any single Gene Vault.',            check:s=>GENE_VAULTS.some(v=>v.icons.every(ic=>(s.ownedIcons||[]).includes(ic))), gp:5},
   {id:'ms_s_broke_dia', name:'Diamond Broke',      desc:'Spend every last diamond — reach exactly 0 💎.',                   check:s=>s.diamonds===0&&safeNum(s.totalDiamondsEarned)>=50, gp:5},
   {id:'ms_s_prestige',  name:'Reborn',             desc:'Prestige your first immortal.',                                      check:s=>(s.immortals||[]).some(im=>im.prestiged), gp:5},
+  {id:'ms_s_darwin',    name:'In His Name',        desc:'Name an immortal "Darwin".',                                         check:s=>!!s.namedImmortalDarwin, gp:5},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -454,7 +455,7 @@ function defaultState(){
     everBroke:false,culledOwnRecord:false,usedLegendaryStock:false,hasSetUsername:false,
     bredBeforeFirstCull:0,firstCullDone:false,culledFromThree:false,
     triedUsernameBG:false,savedAtMidnight:false,sameParentCount:0,lastParentPair:null,
-    breedCapHits:0,lbRefreshCount:0,autoOnlyBreeds:0,hasDisposedImmortal:false,
+    breedCapHits:0,lbRefreshCount:0,autoOnlyBreeds:0,hasDisposedImmortal:false,namedImmortalDarwin:false,
     diamondBuffer:0,lastArchivistGen:1,totalResearchDiamondsEarned:0,
     totalVaultOpens:0,ownedIcons:[],selectedIcon:null,
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
@@ -513,7 +514,7 @@ function sanitiseState(s){
     triedUsernameBG:!!s.triedUsernameBG,savedAtMidnight:!!s.savedAtMidnight,
     sameParentCount:safeNum(s.sameParentCount),lastParentPair:s.lastParentPair||null,
     breedCapHits:safeNum(s.breedCapHits),lbRefreshCount:safeNum(s.lbRefreshCount),autoOnlyBreeds:safeNum(s.autoOnlyBreeds),
-    hasDisposedImmortal:!!s.hasDisposedImmortal,
+    hasDisposedImmortal:!!s.hasDisposedImmortal,namedImmortalDarwin:!!s.namedImmortalDarwin,
     diamondBuffer:safeNum(s.diamondBuffer),lastArchivistGen:safeNum(s.lastArchivistGen,1),
     totalResearchDiamondsEarned:safeNum(s.totalResearchDiamondsEarned),totalVaultOpens:safeNum(s.totalVaultOpens),
     ownedIcons:[...new Set(Array.isArray(s.ownedIcons)?s.ownedIcons:[])],selectedIcon:s.selectedIcon||null,
@@ -544,6 +545,9 @@ function migrateLegacyProgress(){
   const allIds=new Set([...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)]);
   const legacyIds=[...(state.completedQuests||[]),...(state.unlockedAchievements||[])];
   legacyIds.forEach(id=>{if(allIds.has(id)&&!state.completedMilestones.includes(id))state.completedMilestones.push(id);});
+  // Retroactive Darwin check
+  if(!state.namedImmortalDarwin&&(state.immortals||[]).some(im=>im.name?.toLowerCase()==='darwin'))
+    state.namedImmortalDarwin=true;
 }
 
 function flushDiamondBuffer(){
@@ -792,6 +796,8 @@ window.confirmImmortalName=()=>{
   const c=state.population.find(x=>x.id===pendingImmortalId);if(!c)return;
   state.population=state.population.filter(x=>x.id!==pendingImmortalId);
   state.immortals=[...(state.immortals||[]),{id:pendingImmortalId,name,creature:c,skills:[],fitness:calcFitness(c)}];
+  // Secret: named an immortal "Darwin"
+  if(name.toLowerCase()==='darwin') state.namedImmortalDarwin=true;
   pendingImmortalId=null;
   document.getElementById('name-immortal-modal').classList.add('hidden');
   document.getElementById('tab-combat')?.classList.add('has-badge');
