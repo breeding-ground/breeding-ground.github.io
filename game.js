@@ -741,6 +741,12 @@ window.toggleSelect=(id)=>{
 };
 
 // PvP
+window._pvpTargets={};
+window._pvpFight=(key)=>{
+  const t=window._pvpTargets[key];
+  if(!t){addLog('Target not found — refresh the leaderboard.','warn');return;}
+  window.openPvpModal(t.uid,t.username);
+};
 window.openPvpModal=(targetUid,targetName)=>{
   try{
   if(!(state.immortals||[]).length)return addLog('Need at least one immortal to challenge.','warn');
@@ -1241,16 +1247,21 @@ window.renderLeaderboard=(entries,currentUid)=>{
   <p class="lb-formula">Score = (<span>fitness×200</span> + <span>gen×10</span> + <span>bred×3</span> + <span>culled×5</span> + <span>gold</span> + <span>💎×100</span>) ÷ 10</p>`;
   if(!entries?.length){html+=`<p class="lb-empty">No entries yet.</p>`;c.innerHTML=html;return;}
   const hasImmortals=!window.isGuest&&(state.immortals||[]).length>0;
-  // Recalculate scores with current formula
   const processed=entries.map(e=>({...e,displayScore:Math.floor((safeNum(e.rawFitness||e.highestFitness)*200+safeNum(e.rawGeneration||e.generation)*10+safeNum(e.rawTotalBred||e.totalBred)*3+safeNum(e.rawTotalCulled||e.totalCulled)*5+safeNum(e.rawTotalGoldEarned||e.totalGoldEarned)+safeNum(e.rawTotalDiamondsEarned||e.totalDiamondsEarned)*100)/10)})).sort((a,b)=>b.displayScore-a.displayScore);
+  // Store targets in a global map so onclick never has to embed strings in HTML
+  window._pvpTargets={};
   html+=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>SCORE</th><th>MILESTONES</th><th>GEN</th>${hasImmortals?'<th></th>':''}</tr></thead><tbody>`;
   processed.forEach((e,i)=>{
     const rank=i+1,isYou=e.uid===currentUid;
     const nameDisplay=`${e.selectedIcon?e.selectedIcon+' ':''}${esc(e.username||'Anonymous')}${isYou?' ◄ you':''}`;
     const msDone=safeNum(e.milestoneDone||e.completedMilestones);
     const msDisplay=currentTotal?`${fmt(msDone)}/${fmt(currentTotal)}`:`${fmt(msDone)}`;
-    const safeName=(e.username||'Anonymous').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const fightBtn=(!isYou&&hasImmortals)?`<button class="lb-fight-btn" onclick="window.openPvpModal('${e.uid}','${safeName}')">⚔</button>`:'';
+    let fightBtn='';
+    if(!isYou&&hasImmortals){
+      const key='t'+i;
+      window._pvpTargets[key]={uid:e.uid,username:e.username||'Anonymous'};
+      fightBtn=`<button class="lb-fight-btn" onclick="window._pvpFight('${key}')">⚔</button>`;
+    }
     html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(e.displayScore)}</td><td>${msDisplay}</td><td>${fmt(safeNum(e.generation))}</td>${hasImmortals?`<td>${fightBtn}</td>`:''}</tr>`;
   });
   html+=`</tbody></table>`;c.innerHTML=html;
