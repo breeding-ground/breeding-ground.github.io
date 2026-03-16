@@ -295,6 +295,8 @@ const SECRET_MILESTONES=[
   {id:'ms_s_complete',  name:'Completionist',      desc:`Own all ${TOTAL_ICONS} icons.`,                                     check:s=>(s.ownedIcons||[]).length>=TOTAL_ICONS, gp:5},
   {id:'ms_s_pvpwin',    name:'The Challenger',     desc:'Win your first PvP fight.',                                         check:s=>safeNum(s.pvpWins)>=1,          gp:5},
   {id:'ms_s_dispose',   name:'Necessary Evil',     desc:'Dispose of an immortal.',                                           check:s=>!!s.hasDisposedImmortal,        gp:5},
+  {id:'ms_s_vault_max', name:'Hoarder Supreme',    desc:'Fully collect all 25 icons from any single Gene Vault.',            check:s=>GENE_VAULTS.some(v=>v.icons.every(ic=>(s.ownedIcons||[]).includes(ic))), gp:5},
+  {id:'ms_s_broke_dia', name:'Diamond Broke',      desc:'Spend every last diamond — reach exactly 0 💎.',                   check:s=>s.diamonds===0&&safeNum(s.totalDiamondsEarned)>=50, gp:5},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -391,7 +393,7 @@ function sanitiseState(s){
     hasDisposedImmortal:!!s.hasDisposedImmortal,
     diamondBuffer:safeNum(s.diamondBuffer),lastArchivistGen:safeNum(s.lastArchivistGen,1),
     totalResearchDiamondsEarned:safeNum(s.totalResearchDiamondsEarned),totalVaultOpens:safeNum(s.totalVaultOpens),
-    ownedIcons:Array.isArray(s.ownedIcons)?s.ownedIcons:[],selectedIcon:s.selectedIcon||null,
+    ownedIcons:[...new Set(Array.isArray(s.ownedIcons)?s.ownedIcons:[])],selectedIcon:s.selectedIcon||null,
     vault_aquatic_opens:safeNum(s.vault_aquatic_opens),vault_flora_opens:safeNum(s.vault_flora_opens),
     vault_cosmos_opens:safeNum(s.vault_cosmos_opens),vault_predator_opens:safeNum(s.vault_predator_opens),
     vault_ancient_opens:safeNum(s.vault_ancient_opens),vault_machine_opens:safeNum(s.vault_machine_opens),
@@ -730,9 +732,12 @@ window.runPveStage=(stageId,immortalIds)=>{
 window.toggleVaultPreview=(id)=>{vaultPreviewId=vaultPreviewId===id?null:id;renderGeneVault();};
 window.openVault=(id)=>{
   const vault=GENE_VAULTS.find(v=>v.id===id);if(!vault)return;
+  const owned=state.ownedIcons||[];
+  const alreadyOwned=vault.icons.filter(ic=>owned.includes(ic)).length;
+  if(alreadyOwned>=vault.icons.length)return addLog(`${vault.name} fully collected — all ${vault.icons.length} icons owned.`,'warn');
   if(state.diamonds<vault.cost)return addLog(`Need ${fmt(vault.cost)} 💎.`,'warn');
   const icon=vault.icons[Math.floor(Math.random()*vault.icons.length)];
-  const owned=state.ownedIcons||[];const isDupe=owned.includes(icon);
+  const isDupe=owned.includes(icon);
   state.diamonds-=vault.cost;state.totalVaultOpens=safeNum(state.totalVaultOpens)+1;
   state.totalDiamondsSpent=safeNum(state.totalDiamondsSpent)+vault.cost;
   state[`vault_${vault.id}_opens`]=safeNum(state[`vault_${vault.id}_opens`])+1;
@@ -960,6 +965,62 @@ function renderResearch(){
 
 function renderPopulation(){
   const container=document.getElementById('population-table');if(!container)return;
+
+  // ── Immortals first ──────────────────────────────────────
+  const imSec=document.getElementById('immortals-section');
+  const immortals=state.immortals||[];
+  if(imSec){
+    if(!immortals.length){imSec.innerHTML='';}
+    else{
+      let imHtml=`<p class="immortals-title" style="margin-bottom:14px">🔱 IMMORTALS — ${fmt(state.genePoints)} 🧪 available</p><div class="immortal-cards">`;
+      immortals.forEach(im=>{
+        const stats=getImmortalStats(im);
+        const refund=disposalGpRefund(im);
+        imHtml+=`<div class="immortal-card">
+          <div class="im-header"><span class="im-name">🔱 ${im.name}</span><span class="im-gp-info">Fitness ${im.fitness||'?'}</span></div>
+          <div class="im-base-stats">
+            <span class="im-stat">ATK <span>${stats.atk}</span></span>
+            <span class="im-stat">SPD <span>${stats.spd}</span></span>
+            <span class="im-stat">DEF <span>${stats.def}</span></span>
+            <span class="im-stat">HP <span>${stats.hp}</span></span>
+            ${stats.crit?`<span class="im-stat">CRIT <span>${Math.round(stats.crit*100)}%</span></span>`:''}
+            ${stats.dodge?`<span class="im-stat">DODGE <span>${Math.round(stats.dodge*100)}%</span></span>`:''}
+            ${stats.regen?`<span class="im-stat">REGEN <span>${stats.regen}/rnd</span></span>`:''}
+          </div>
+          <p class="im-skill-tree-label">// SKILL TREE</p>
+          <div class="im-skill-tree">`;
+        IM_BRANCHES.forEach(branch=>{
+          imHtml+=`<div class="im-branch"><div class="im-branch-title" style="color:${branch.color}">${branch.name}</div>`;
+          branch.skills.forEach((skill,idx)=>{
+            const owned=(im.skills||[]).includes(skill.id);
+            const blockedByOwned=skill.blocked_by.some(bid=>(im.skills||[]).includes(bid));
+            const prevOwned=!skill.requires||(im.skills||[]).includes(skill.requires);
+            const isLocked=!owned&&(!prevOwned||blockedByOwned);
+            const isBlocked=!owned&&blockedByOwned;
+            const canBuy=!owned&&prevOwned&&!blockedByOwned&&state.genePoints>=skill.cost;
+            const nodeCls=owned?'sk-owned':isBlocked?'sk-blocked':isLocked?'sk-locked':'sk-available';
+            if(idx>0) imHtml+=`<div class="im-connector ${owned?'conn-lit':''}" style="text-align:center;color:${owned?'var(--gp)':'var(--border)'};font-size:9px">↓</div>`;
+            imHtml+=`<div class="im-skill-node ${nodeCls}" ${(!owned&&!isLocked&&!isBlocked)?`onclick="buyImmortalSkill('${im.id}','${skill.id}')" title="Click to unlock"`:''}>
+              <div class="im-sn-name">${skill.name}</div>
+              <div class="im-sn-effect">${skill.effect}</div>`;
+            if(owned)imHtml+=`<div class="im-sn-cost owned">✓ ACTIVE</div>`;
+            else if(isBlocked)imHtml+=`<div class="im-sn-cost blocked">🚫 BLOCKED</div>`;
+            else if(isLocked)imHtml+=`<div class="im-sn-cost locked">🔒 LOCKED</div>`;
+            else imHtml+=`<div class="im-sn-cost ${canBuy?'afford':'noafford'}">${skill.cost} 🧪${canBuy?'':' (need more)'}</div>`;
+            imHtml+=`</div>`;
+          });
+          imHtml+=`</div>`;
+        });
+        imHtml+=`</div>
+          <button onclick="disposeImmortal('${im.id}')" style="margin-top:10px;border-color:var(--red);color:var(--red);font-size:10px;padding:4px 10px;width:auto">[ DISPOSE — recover ${refund}🧪 ]</button>
+        </div>`;
+      });
+      imHtml+=`</div><div style="border-bottom:1px solid var(--border);margin:20px 0"></div>`;
+      imSec.innerHTML=imHtml;
+    }
+  }
+
+  // ── Population table ────────────────────────────────────
   const hasSel=safeNum(state.upgrades?.selective)>0;
   const sorted=[...state.population].map(c=>({...c,_f:calcFitness(c)})).sort((a,b)=>b._f-a._f);
   let html='';
@@ -988,58 +1049,6 @@ function renderPopulation(){
   }
   container.innerHTML=html;
 
-  // Immortals section
-  const imSec=document.getElementById('immortals-section');if(!imSec)return;
-  const immortals=state.immortals||[];
-  if(!immortals.length){imSec.innerHTML='';return;}
-  let imHtml=`<p class="immortals-title">🔱 IMMORTALS — ${fmt(state.genePoints)} 🧪 available</p><div class="immortal-cards">`;
-  immortals.forEach(im=>{
-    const stats=getImmortalStats(im);
-    const refund=disposalGpRefund(im);
-    imHtml+=`<div class="immortal-card">
-      <div class="im-header"><span class="im-name">🔱 ${im.name}</span><span class="im-gp-info">Fitness ${im.fitness||'?'}</span></div>
-      <div class="im-base-stats">
-        <span class="im-stat">ATK <span>${stats.atk}</span></span>
-        <span class="im-stat">SPD <span>${stats.spd}</span></span>
-        <span class="im-stat">DEF <span>${stats.def}</span></span>
-        <span class="im-stat">HP <span>${stats.hp}</span></span>
-        ${stats.crit?`<span class="im-stat">CRIT <span>${Math.round(stats.crit*100)}%</span></span>`:''}
-        ${stats.dodge?`<span class="im-stat">DODGE <span>${Math.round(stats.dodge*100)}%</span></span>`:''}
-        ${stats.regen?`<span class="im-stat">REGEN <span>${stats.regen}/rnd</span></span>`:''}
-      </div>
-      <p class="im-skill-tree-label">// SKILL TREE</p>
-      <div class="im-skill-tree">`;
-    IM_BRANCHES.forEach(branch=>{
-      imHtml+=`<div class="im-branch"><div class="im-branch-title" style="color:${branch.color}">${branch.name}</div>`;
-      branch.skills.forEach((skill,idx)=>{
-        const owned=(im.skills||[]).includes(skill.id);
-        const blockedByOwned=skill.blocked_by.some(bid=>(im.skills||[]).includes(bid));
-        const blocksOwned=skill.blocks.some(bid=>(im.skills||[]).includes(bid));
-        const prevOwned=!skill.requires||(im.skills||[]).includes(skill.requires);
-        const isLocked=!owned&&(!prevOwned||blockedByOwned);
-        const isBlocked=!owned&&blockedByOwned;
-        const canBuy=!owned&&prevOwned&&!blockedByOwned&&state.genePoints>=skill.cost;
-        const nodeCls=owned?'sk-owned':isBlocked?'sk-blocked':isLocked?'sk-locked':'sk-available';
-        if(idx>0){
-          imHtml+=`<div class="im-connector ${owned?'conn-lit':''}" style="text-align:center;color:${owned?'var(--gp)':'var(--border)'};font-size:9px">↓</div>`;
-        }
-        imHtml+=`<div class="im-skill-node ${nodeCls}" ${(!owned&&!isLocked&&!isBlocked)?`onclick="buyImmortalSkill('${im.id}','${skill.id}')" title="Click to unlock"`:''}>
-          <div class="im-sn-name">${skill.name}</div>
-          <div class="im-sn-effect">${skill.effect}</div>`;
-        if(owned)imHtml+=`<div class="im-sn-cost owned">✓ ACTIVE</div>`;
-        else if(isBlocked)imHtml+=`<div class="im-sn-cost blocked">🚫 BLOCKED</div>`;
-        else if(isLocked)imHtml+=`<div class="im-sn-cost locked">🔒 LOCKED</div>`;
-        else imHtml+=`<div class="im-sn-cost ${canBuy?'afford':'noafford'}">${skill.cost} 🧪${canBuy?'':' (need more)'}</div>`;
-        imHtml+=`</div>`;
-      });
-      imHtml+=`</div>`;
-    });
-    imHtml+=`</div>
-      <button onclick="disposeImmortal('${im.id}')" style="margin-top:10px;border-color:var(--red);color:var(--red);font-size:10px;padding:4px 10px;width:auto">[ DISPOSE — recover ${refund}🧪 ]</button>
-    </div>`;
-  });
-  imHtml+=`</div>`;
-  imSec.innerHTML=imHtml;
 }
 
 function renderCombat(){
@@ -1222,7 +1231,7 @@ function renderGeneVault(){
   GENE_VAULTS.forEach(vault=>{
     const opens=safeNum(state[`vault_${vault.id}_opens`]);
     const ownedN=vault.icons.filter(ic=>owned.includes(ic)).length;
-    const isPrev=vaultPreviewId===vault.id,can=state.diamonds>=vault.cost;
+    const isPrev=vaultPreviewId===vault.id;
     html+=`<div class="vault-box-card ${vault.cssClass}">
       <div class="vb-header"><span class="vb-name">${vault.name}</span><span class="vb-theme">${vault.theme}</span></div>
       <div class="vb-cost">${fmt(vault.cost)} 💎 per open</div>
@@ -1234,7 +1243,9 @@ function renderGeneVault(){
       vault.icons.forEach(ic=>{html+=`<div class="vb-icon-preview ${owned.includes(ic)?'owned':''}">${ic}</div>`;});
       html+=`</div>`;
     }
-    html+=`<button class="btn-diamond ${can?'':'cant-afford'}" onclick="openVault('${vault.id}')">[ OPEN — ${fmt(vault.cost)} 💎 ]</button></div>`;
+    const vaultFull=ownedN>=vault.icons.length;
+    const can=!vaultFull&&state.diamonds>=vault.cost;
+    html+=`<button class="btn-diamond ${can?'':'cant-afford'}" onclick="openVault('${vault.id}')">${vaultFull?'[ COMPLETE ✓ ]':`[ OPEN — ${fmt(vault.cost)} 💎 ]`}</button></div>`;
   });
   html+=`</div>`;
   c.innerHTML=html;
