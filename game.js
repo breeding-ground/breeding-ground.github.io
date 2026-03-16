@@ -104,6 +104,12 @@ function getImmortalStats(im){
   if(s.includes('def3')){def+=40;hp+=30;}
   if(s.includes('def4')){def+=60;hp+=40;}
   if(s.includes('def5')){def+=80;hp+=100;regen=15;}
+  // Prestige skills stack on top
+  const ps=getPrestigeStats(im);
+  atk+=ps.atk; spd+=ps.spd; def+=ps.def; hp+=ps.hp;
+  crit=Math.max(crit,ps.crit);
+  dodge=Math.max(dodge,ps.dodge);
+  regen+=ps.regen;
   return{atk,spd,def,hp,crit,dodge,regen};
 }
 
@@ -127,8 +133,9 @@ const GENE_VAULTS=[
 ];
 // Boss icons (PvE exclusive — 4 total)
 const PVE_BOSS_ICONS=['🩸','👁️','💀','🌑'];
+const PVE_ACT2_BOSS_ICONS=['🌋','🏔️','👾','🎆'];
 const TOTAL_VAULT_ICONS=150;
-const TOTAL_ICONS=TOTAL_VAULT_ICONS+PVE_BOSS_ICONS.length; // 154
+const TOTAL_ICONS=TOTAL_VAULT_ICONS+PVE_BOSS_ICONS.length+PVE_ACT2_BOSS_ICONS.length; // 158
 
 let vaultPreviewId=null;
 
@@ -192,6 +199,117 @@ const PVE_STAGES=[
 ];
 
 // ── Combat helpers ────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  PRESTIGE SKILL TREE — unlocked per immortal after prestiging
+//  3 branches × 5 tiers. Costs: 10/25/60/150/300 GP
+//  These stack ON TOP of the base skill tree.
+// ═══════════════════════════════════════════════════════════
+const PRESTIGE_BRANCHES=[
+  { id:'p_wrath', name:'WRATH', color:'#ff6b6b',
+    skills:[
+      {id:'pw1',cost:10,  name:'Awakening',       effect:'ATK +100',                 desc:'The seal is broken.'},
+      {id:'pw2',cost:25,  name:'Blood Fury',       effect:'ATK +180, crit 35%',       desc:'Rage beyond reason.'},
+      {id:'pw3',cost:60,  name:'Slaughter',        effect:'ATK +280',                 desc:'Nothing survives.'},
+      {id:'pw4',cost:150, name:'Annihilator',      effect:'ATK +400, crit 50%',       desc:'Absolute destruction.'},
+      {id:'pw5',cost:300, name:'Omega Rage',        effect:'ATK +600',                 desc:'The end made flesh.'},
+    ]},
+  { id:'p_phantom', name:'PHANTOM', color:'#818cf8',
+    skills:[
+      {id:'pp1',cost:10,  name:'Blur Form',        effect:'SPD +100, dodge 30%',      desc:'Barely visible.'},
+      {id:'pp2',cost:25,  name:'Phase State',      effect:'SPD +200',                 desc:'Exists between moments.'},
+      {id:'pp3',cost:60,  name:'Ethereal',         effect:'SPD +300, dodge 45%',      desc:'Untouchable.'},
+      {id:'pp4',cost:150, name:'Spectral',         effect:'SPD +450',                 desc:'A blur of intent.'},
+      {id:'pp5',cost:300, name:'Transcendent',     effect:'SPD +600, dodge 60%',      desc:'Beyond physical law.'},
+    ]},
+  { id:'p_titan', name:'TITAN', color:'#34d399',
+    skills:[
+      {id:'pt1',cost:10,  name:'Adamantine',       effect:'DEF +100, HP +200',        desc:'The flesh turns to iron.'},
+      {id:'pt2',cost:25,  name:'Unbreakable',      effect:'DEF +200, regen +50',      desc:'Cannot be worn down.'},
+      {id:'pt3',cost:60,  name:'Colossus',         effect:'DEF +300, HP +500',        desc:'A fortress incarnate.'},
+      {id:'pt4',cost:150, name:'Invincible',       effect:'DEF +450, regen +100',     desc:'Damage is irrelevant.'},
+      {id:'pt5',cost:300, name:'Eternal',          effect:'DEF +600, HP +1000, regen +150', desc:'Cannot die.'},
+    ]},
+];
+const PRESTIGE_SKILL_MAP={};
+PRESTIGE_BRANCHES.forEach(b=>b.skills.forEach(s=>{PRESTIGE_SKILL_MAP[s.id]={...s,branch:b.id};}));
+
+function getPrestigeStats(im){
+  const ps=im.prestigeSkills||[];
+  let atk=0,spd=0,def=0,hp=0,crit=0,dodge=0,regen=0;
+  if(ps.includes('pw1'))atk+=100; if(ps.includes('pw2')){atk+=180;crit=Math.max(crit,0.35);} if(ps.includes('pw3'))atk+=280;
+  if(ps.includes('pw4')){atk+=400;crit=Math.max(crit,0.50);} if(ps.includes('pw5'))atk+=600;
+  if(ps.includes('pp1')){spd+=100;dodge=Math.max(dodge,0.30);} if(ps.includes('pp2'))spd+=200;
+  if(ps.includes('pp3')){spd+=300;dodge=Math.max(dodge,0.45);} if(ps.includes('pp4'))spd+=450;
+  if(ps.includes('pp5')){spd+=600;dodge=Math.max(dodge,0.60);}
+  if(ps.includes('pt1')){def+=100;hp+=200;} if(ps.includes('pt2')){def+=200;regen+=50;}
+  if(ps.includes('pt3')){def+=300;hp+=500;} if(ps.includes('pt4')){def+=450;regen+=100;}
+  if(ps.includes('pt5')){def+=600;hp+=1000;regen+=150;}
+  return{atk,spd,def,hp,crit,dodge,regen};
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PvE ACT 2 — 33 stages
+//  Requires all 37 Act 1 stages cleared.
+//  Balanced: stage 33 boss needs 3 fully maxed + prestiged immortals.
+//  Enemy formula: ATK=150+level*28, DEF=100+level*22, HP=400+level*90
+//  Crits at level 5+, dodge at 10+, regen at 15+
+// ═══════════════════════════════════════════════════════════
+function makePveAct2Enemy(level,idx=0){
+  const names=['Warlord','Titan','Sovereign','Ascendant','Eternal','Void','Ancient Prime','Omega','Apex Prime','Colossus Prime'];
+  const jitter=rand(-8,8);
+  return{
+    atk: Math.max(50, 150+level*28+jitter),
+    spd: Math.max(30, 120+level*22+Math.floor(jitter/2)-idx*5),
+    def: Math.max(30, 100+level*22+jitter),
+    hp:  400+level*90,
+    crit:  level>=5  ? 0.20 : 0,
+    dodge: level>=10 ? 0.15 : 0,
+    regen: level>=15 ? level*3 : 0,
+    name:`${names[idx%names.length]} ${String.fromCharCode(65+idx)}`,
+  };
+}
+
+const PVE_ACT2_STAGES=[
+  // Act 2 — The Ascendancy (stages 1-9, needs 1-2 fully skilled immortals or 1 prestiged)
+  {id:'a2_1', act:2,name:'The Veil Breaks',       desc:'Something ancient stirs. Your first Act 2 opponent is leagues beyond Act 1.',enemies:1,eLevel:2, gpR:5,  iconR:null,       boss:false},
+  {id:'a2_2', act:2,name:'Twin Sovereigns',        desc:'Two creatures of extraordinary power. Coordination is essential.',           enemies:2,eLevel:2, gpR:6,  iconR:null,       boss:false},
+  {id:'a2_3', act:2,name:'The Ascendants',         desc:'Three ascended specimens. Your immortals must be fully skilled.',            enemies:3,eLevel:3, gpR:7,  iconR:null,       boss:false},
+  {id:'a2_4', act:2,name:'Prime Champion',         desc:'A single Prime-class champion. Near-perfect genetics.',                     enemies:1,eLevel:4, gpR:7,  iconR:null,       boss:false},
+  {id:'a2_5', act:2,name:'The Siege',              desc:'Four enemies assaulting in waves. Endurance is critical.',                  enemies:4,eLevel:3, gpR:8,  iconR:null,       boss:false},
+  {id:'a2_6', act:2,name:'Void Hunters',           desc:'Two Void-class hunters with devastating speed.',                            enemies:2,eLevel:5, gpR:8,  iconR:null,       boss:false},
+  {id:'a2_7', act:2,name:'Ancient Tribunal',       desc:'Three ancient judges. Crits and dodges appear here.',                      enemies:3,eLevel:5, gpR:9,  iconR:null,       boss:false},
+  {id:'a2_8', act:2,name:'Eternal Guard',          desc:'Five hardened sentinels. Your first true act 2 multi-wave.',               enemies:5,eLevel:4, gpR:10, iconR:null,       boss:false},
+  {id:'a2_9', act:2,name:'Apex Convergence',       desc:'Three Apex Primes at full power. The hardest stage before the first boss.', enemies:3,eLevel:7, gpR:12, iconR:null,       boss:false},
+  {id:'a2_10',act:2,name:'🌋 BOSS: The Volcano',   desc:'An immortal forged in catastrophe. A fully skilled immortal may survive.', enemies:1,eLevel:8, gpR:20, iconR:'🌋',        boss:true},
+  // Act 2 — The Reckoning (stages 11-19, needs 2 fighters, 1 prestiged minimum)
+  {id:'a2_11',act:2,name:'Reckoning Vanguard',     desc:'Two Reckoning-class vanguards. Prestige is no longer optional.',           enemies:2,eLevel:9, gpR:12, iconR:null,       boss:false},
+  {id:'a2_12',act:2,name:'Triad of Doom',          desc:'Three void-class opponents with full crit and dodge.',                     enemies:3,eLevel:9, gpR:13, iconR:null,       boss:false},
+  {id:'a2_13',act:2,name:'The Overwhelming',       desc:'Six enemies at once. Sheer numbers designed to overwhelm.',               enemies:6,eLevel:8, gpR:14, iconR:null,       boss:false},
+  {id:'a2_14',act:2,name:'Prime Duel',             desc:'Two Prime-class immortals locked in eternal combat. Join it.',             enemies:2,eLevel:11,gpR:14, iconR:null,       boss:false},
+  {id:'a2_15',act:2,name:'The Purge',              desc:'Five ascendants executing a purge. Regen begins to matter here.',         enemies:5,eLevel:10,gpR:15, iconR:null,       boss:false},
+  {id:'a2_16',act:2,name:'Eternal Legion',         desc:'Four eternal-class soldiers. Near max regen per round.',                  enemies:4,eLevel:12,gpR:16, iconR:null,       boss:false},
+  {id:'a2_17',act:2,name:'The Impossible Apex',   desc:'One supremely optimised apex predator. A wall of pure power.',            enemies:1,eLevel:14,gpR:16, iconR:null,       boss:false},
+  {id:'a2_18',act:2,name:'Void Annihilators',      desc:'Three annihilators bred for mass destruction.',                           enemies:3,eLevel:13,gpR:18, iconR:null,       boss:false},
+  {id:'a2_19',act:2,name:'The Final Tribunal',     desc:'Five ancient judges at maximum power. The hardest stage before boss 2.', enemies:5,eLevel:13,gpR:20, iconR:null,       boss:false},
+  {id:'a2_20',act:2,name:'🏔️ BOSS: The Summit',   desc:'A creature that has never lost. Two fighters strongly advised.',          enemies:1,eLevel:16,gpR:25, iconR:'🏔️',        boss:true},
+  // Act 2 — The Transcendence (stages 21-29, needs 2-3 fighters, 2 prestiged)
+  {id:'a2_21',act:2,name:'Transcendent Vanguard',  desc:'Two transcendent-class specimens. Everything is maximised.',              enemies:2,eLevel:17,gpR:18, iconR:null,       boss:false},
+  {id:'a2_22',act:2,name:'The Omega Triad',        desc:'Three Omega-class fighters. Regen will frustrate unbuffed immortals.',   enemies:3,eLevel:18,gpR:20, iconR:null,       boss:false},
+  {id:'a2_23',act:2,name:'Apex Armada',            desc:'Four apex-class creatures moving as a single weapon.',                   enemies:4,eLevel:18,gpR:22, iconR:null,       boss:false},
+  {id:'a2_24',act:2,name:'The Convergence',        desc:'Two perfect specimens — opposite ends of the genetic spectrum.',         enemies:2,eLevel:22,gpR:22, iconR:null,       boss:false},
+  {id:'a2_25',act:2,name:'Eternal Siege',          desc:'Five eternal-class soldiers with full regen. Attrition warfare.',        enemies:5,eLevel:19,gpR:24, iconR:null,       boss:false},
+  {id:'a2_26',act:2,name:'The Void Army',          desc:'Six void hunters. Overwhelming speed combined with numbers.',            enemies:6,eLevel:18,gpR:25, iconR:null,       boss:false},
+  {id:'a2_27',act:2,name:'Prime Tribunal',         desc:'Three Prime-class ancient judges at absolute peak power.',              enemies:3,eLevel:22,gpR:26, iconR:null,       boss:false},
+  {id:'a2_28',act:2,name:'Transcendent Duel',      desc:'Two transcendent champions. The hardest two-enemy fight yet.',          enemies:2,eLevel:25,gpR:28, iconR:null,       boss:false},
+  {id:'a2_29',act:2,name:'The Final Legion',       desc:'Five fully transcendent soldiers. The penultimate test before boss 3.', enemies:5,eLevel:22,gpR:30, iconR:null,       boss:false},
+  {id:'a2_30',act:2,name:'👾 BOSS: The Void God',  desc:'A being of pure void energy. Three fighters needed to survive.',        enemies:1,eLevel:27,gpR:35, iconR:'👾',        boss:true},
+  // Act 2 — The Finale (stages 31-33, needs 3 fully maxed prestiged)
+  {id:'a2_31',act:2,name:'Omega Armada',           desc:'Four Omega Prime creatures. All stats maximised. Regen 90+.',           enemies:4,eLevel:28,gpR:30, iconR:null,       boss:false},
+  {id:'a2_32',act:2,name:'The Transcendent Six',   desc:'Six fully transcendent soldiers. The last challenge before the end.',   enemies:6,eLevel:26,gpR:35, iconR:null,       boss:false},
+  {id:'a2_33',act:2,name:'🎆 BOSS: The Absolute',  desc:'The final reckoning. Never defeated. Three fully prestiged immortals required.', enemies:2,eLevel:33,gpR:100,iconR:'🎆',boss:true},
+];
+
+// Enemy formula for Act 1 (unchanged)
 // Enemy formula — designed so a fresh immortal (ATK/SPD/DEF 125, HP 200) can beat level 1-5,
 // and maxed immortals with 3 fighters are needed for level 20 (final boss).
 // ATK = 30+level*9, SPD = 25+level*8, DEF = 20+level*9, HP = 120+level*38
@@ -274,11 +392,13 @@ const MILESTONE_TRACKS=[
   {id:'research',name:'RESEARCH',val:s=>safeNum(s.research?.labInterns)+safeNum(s.research?.geneAnalysts)+safeNum(s.research?.lineageArchivists)+(s.research?.headOfResearch?1:0)+(s.research?.automatedSequencer?1:0),unit:'researchers',
    tiers:[{id:'m_first_researcher',name:'Research Initiative',target:1,gp:1},{id:'mt_res_3',name:'Growing Team',target:3,gp:1},{id:'mt_res_8',name:'Division',target:8,gp:2},{id:'mt_res_15',name:'Department',target:15,gp:2},{id:'mt_res_25',name:'Full Lab',target:25,gp:3},{id:'mt_res_37',name:'Complete Division',target:37,gp:4}]},
   {id:'icons',name:'ICON COLLECTION',val:s=>(s.ownedIcons||[]).length,unit:'icons',
-   tiers:[{id:'mt_icon_1',name:'First Find',target:1,gp:0},{id:'mt_icon_5',name:'Growing Set',target:5,gp:1},{id:'mt_icon_15',name:'Collector',target:15,gp:1},{id:'mt_icon_30',name:'Curator',target:30,gp:2},{id:'mt_icon_50',name:'Archivist',target:50,gp:2},{id:'mt_icon_80',name:'Master Collector',target:80,gp:3},{id:'mt_icon_129',name:'Complete Set',target:154,gp:5}]},
+   tiers:[{id:'mt_icon_1',name:'First Find',target:1,gp:0},{id:'mt_icon_5',name:'Growing Set',target:5,gp:1},{id:'mt_icon_15',name:'Collector',target:15,gp:1},{id:'mt_icon_30',name:'Curator',target:30,gp:2},{id:'mt_icon_50',name:'Archivist',target:50,gp:2},{id:'mt_icon_80',name:'Master Collector',target:80,gp:3},{id:'mt_icon_158',name:'Complete Set',target:158,gp:5}]},
   {id:'immortals',name:'IMMORTALS',val:s=>(s.immortals||[]).length,unit:'immortals',
    tiers:[{id:'mt_imm_1',name:'First Champion',target:1,gp:2},{id:'mt_imm_3',name:'Elite Guard',target:3,gp:3},{id:'mt_imm_5',name:'Immortal Legion',target:5,gp:4}]},
-  {id:'pve',name:'PVE CAMPAIGN',val:s=>(s.pveCompleted||[]).length,unit:'stages cleared',
+  {id:'pve',name:'PVE ACT 1',val:s=>(s.pveCompleted||[]).length,unit:'stages cleared',
    tiers:[{id:'mt_pve_1',name:'First Blood',target:1,gp:2},{id:'mt_pve_5',name:'Veteran Fighter',target:5,gp:3},{id:'mt_pve_10',name:'Act 1 Complete',target:10,gp:4},{id:'mt_pve_20',name:'Act 2 Complete',target:20,gp:5},{id:'mt_pve_30',name:'Act 3 Complete',target:30,gp:6},{id:'mt_pve_37',name:'Conqueror',target:37,gp:10}]},
+  {id:'pve2',name:'PVE ACT 2',val:s=>(s.pveAct2Completed||[]).length,unit:'act 2 stages',
+   tiers:[{id:'mt_pve2_1',name:'Ascendant',target:1,gp:3},{id:'mt_pve2_10',name:'First Reckoning',target:10,gp:5},{id:'mt_pve2_20',name:'Transcendent',target:20,gp:8},{id:'mt_pve2_33',name:'The Absolute',target:33,gp:15}]},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -297,6 +417,7 @@ const SECRET_MILESTONES=[
   {id:'ms_s_dispose',   name:'Necessary Evil',     desc:'Dispose of an immortal.',                                           check:s=>!!s.hasDisposedImmortal,        gp:5},
   {id:'ms_s_vault_max', name:'Hoarder Supreme',    desc:'Fully collect all 25 icons from any single Gene Vault.',            check:s=>GENE_VAULTS.some(v=>v.icons.every(ic=>(s.ownedIcons||[]).includes(ic))), gp:5},
   {id:'ms_s_broke_dia', name:'Diamond Broke',      desc:'Spend every last diamond — reach exactly 0 💎.',                   check:s=>s.diamonds===0&&safeNum(s.totalDiamondsEarned)>=50, gp:5},
+  {id:'ms_s_prestige',  name:'Reborn',             desc:'Prestige your first immortal.',                                      check:s=>(s.immortals||[]).some(im=>im.prestiged), gp:5},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -317,7 +438,7 @@ function guardReady(){if(!_gameReady){addLog('Game still loading — please wait
 
 let currentTab='log',selectedForBreeding=[],bestEverTraits={};
 let autoBreedInterval=null,autoBreederPaused=false,autoBredTotal=0;
-let pendingImmortalId=null,combatSubTab='pve';
+let pendingImmortalId=null,combatSubTab='pve',pveAct=1;
 let pvpTarget=null,pvpMyImmortal=null;
 window.isGuest=false;
 
@@ -336,7 +457,7 @@ function defaultState(){
     totalVaultOpens:0,ownedIcons:[],selectedIcon:null,
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
     vault_predator_opens:0,vault_ancient_opens:0,vault_machine_opens:0,
-    immortals:[],combatSlots:1,pveCompleted:[],pvpWins:0,pvpLosses:0,combatLog:[],
+    immortals:[],combatSlots:1,pveCompleted:[],pveAct2Completed:[],pvpWins:0,pvpLosses:0,combatLog:[],
     research:{labInterns:0,geneAnalysts:0,lineageArchivists:0,headOfResearch:false,automatedSequencer:false},
     upgrades:{popCap:0,mutation:0,traitAmp:0,breedYield:0,cullValue:0,selective:0,cullInsight:0,lineageMem:0,hybridVigor:0,adaptiveGenetics:0,autoBreeder:0,traitCapBoost:0,eliteMutation:0,deepArchive:0},
   };
@@ -399,9 +520,10 @@ function sanitiseState(s){
     vault_ancient_opens:safeNum(s.vault_ancient_opens),vault_machine_opens:safeNum(s.vault_machine_opens),
     completedMilestones:Array.isArray(s.completedMilestones)?s.completedMilestones:[],
     milestoneDiamondsAwarded:Array.isArray(s.milestoneDiamondsAwarded)?s.milestoneDiamondsAwarded:[],
-    immortals:Array.isArray(s.immortals)?s.immortals:[],
+    immortals:Array.isArray(s.immortals)?s.immortals.map(im=>({...im,prestigeSkills:Array.isArray(im.prestigeSkills)?im.prestigeSkills:[],prestiged:!!im.prestiged})):[],
     combatSlots:Math.max(1,safeNum(s.combatSlots,1)),
     pveCompleted:Array.isArray(s.pveCompleted)?s.pveCompleted:[],
+    pveAct2Completed:Array.isArray(s.pveAct2Completed)?s.pveAct2Completed:[],
     pvpWins:safeNum(s.pvpWins),pvpLosses:safeNum(s.pvpLosses),
     combatLog:Array.isArray(s.combatLog)?s.combatLog:[],
     research:{labInterns:safeNum(s.research?.labInterns),geneAnalysts:safeNum(s.research?.geneAnalysts),lineageArchivists:safeNum(s.research?.lineageArchivists),headOfResearch:!!s.research?.headOfResearch,automatedSequencer:!!s.research?.automatedSequencer},
@@ -700,13 +822,46 @@ window.buyImmortalSkill=(immortalId,skillId)=>{
 };
 
 // PvE
+const PRESTIGE_GP_COST=200;
+const PRESTIGE_DIAMOND_COST=200000;
+
+window.prestigeImmortal=(immortalId)=>{
+  const im=(state.immortals||[]).find(x=>x.id===immortalId);if(!im)return;
+  if(im.prestiged)return addLog(`${im.name} is already prestiged.`,'warn');
+  const act1Done=(state.pveCompleted||[]).length>=PVE_STAGES.length;
+  if(!act1Done)return addLog('Complete the entire Act 1 campaign first.','warn');
+  if(state.genePoints<PRESTIGE_GP_COST)return addLog(`Need ${PRESTIGE_GP_COST} 🧪 to prestige — you have ${fmt(state.genePoints)}.`,'warn');
+  if(state.diamonds<PRESTIGE_DIAMOND_COST)return addLog(`Need ${fmt(PRESTIGE_DIAMOND_COST)} 💎 to prestige — you have ${fmt(state.diamonds)}.`,'warn');
+  if(!confirm(`Prestige ${im.name}? This costs ${PRESTIGE_GP_COST} 🧪 and ${fmt(PRESTIGE_DIAMOND_COST)} 💎 and unlocks their Prestige Skill Tree.`))return;
+  state.genePoints-=PRESTIGE_GP_COST;
+  state.diamonds-=PRESTIGE_DIAMOND_COST;
+  state.totalDiamondsSpent=safeNum(state.totalDiamondsSpent)+PRESTIGE_DIAMOND_COST;
+  im.prestiged=true;
+  im.prestigeSkills=[];
+  addLog(`🌟 ${im.name} has been PRESTIGED! Prestige Skill Tree unlocked.`,'highlight');
+  checkMilestones();renderAll();
+};
+
+window.buyPrestigeSkill=(immortalId,skillId)=>{
+  const im=(state.immortals||[]).find(x=>x.id===immortalId);if(!im||!im.prestiged)return;
+  const skill=PRESTIGE_SKILL_MAP[skillId];if(!skill)return;
+  if((im.prestigeSkills||[]).includes(skillId))return addLog('Already unlocked.','warn');
+  const branch=PRESTIGE_BRANCHES.find(b=>b.id===skill.branch);
+  const tierIdx=branch.skills.findIndex(s=>s.id===skillId);
+  if(tierIdx>0&&!(im.prestigeSkills||[]).includes(branch.skills[tierIdx-1].id))
+    return addLog('Requires previous prestige tier first.','warn');
+  if(state.genePoints<skill.cost)return addLog(`Need ${skill.cost} 🧪 — have ${fmt(state.genePoints)}.`,'warn');
+  state.genePoints-=skill.cost;
+  im.prestigeSkills=[...(im.prestigeSkills||[]),skillId];
+  addLog(`🌟 ${im.name}: ${skill.name} (${skill.effect})`,'gp');
+  checkMilestones();renderAll();
+};
 window.runPveStage=(stageId,immortalIds)=>{
   const stage=PVE_STAGES.find(s=>s.id===stageId);if(!stage)return;
   if((state.pveCompleted||[]).includes(stageId))return addLog('Already cleared.','warn');
   const idx=PVE_STAGES.findIndex(s=>s.id===stageId);
   if(idx>0&&!(state.pveCompleted||[]).includes(PVE_STAGES[idx-1].id))return addLog('Complete previous stage first.','warn');
   const ids=Array.isArray(immortalIds)?immortalIds:[immortalIds];
-  // Deduplicate: remove any id that appears more than once
   const seen=new Set(); const uniqueIds=[];
   for(const id of ids){ if(id&&!seen.has(id)){seen.add(id);uniqueIds.push(id);} }
   if(ids.filter(Boolean).length!==uniqueIds.length)return addLog('You cannot use the same immortal in multiple slots.','warn');
@@ -724,6 +879,35 @@ window.runPveStage=(stageId,immortalIds)=>{
     addLog(`🏆 "${stage.name}" cleared! +${stage.gpR}🧪`+(stage.iconR?` + icon ${stage.iconR}`:''),'gp');
   } else {
     addLog(`💀 "${stage.name}" failed. Train your immortals harder.`,'warn');
+  }
+  checkMilestones();renderAll();
+};
+
+window.runAct2Stage=(stageId,immortalIds)=>{
+  const stage=PVE_ACT2_STAGES.find(s=>s.id===stageId);if(!stage)return;
+  // Act 2 requires all Act 1 cleared
+  if((state.pveCompleted||[]).length<PVE_STAGES.length)return addLog('Complete all of Act 1 first.','warn');
+  if((state.pveAct2Completed||[]).includes(stageId))return addLog('Already cleared.','warn');
+  const idx=PVE_ACT2_STAGES.findIndex(s=>s.id===stageId);
+  if(idx>0&&!(state.pveAct2Completed||[]).includes(PVE_ACT2_STAGES[idx-1].id))return addLog('Complete previous stage first.','warn');
+  const ids=Array.isArray(immortalIds)?immortalIds:[immortalIds];
+  const seen=new Set(); const uniqueIds=[];
+  for(const id of ids){ if(id&&!seen.has(id)){seen.add(id);uniqueIds.push(id);} }
+  if(ids.filter(Boolean).length!==uniqueIds.length)return addLog('You cannot use the same immortal in multiple slots.','warn');
+  const ims=uniqueIds.filter(Boolean).map(id=>(state.immortals||[]).find(x=>x.id===id)).filter(Boolean);
+  if(!ims.length)return addLog('No valid immortals selected.','warn');
+  const atkDefs=ims.map(im=>({...getImmortalStats(im),name:im.name}));
+  const defDefs=Array.from({length:stage.enemies},(_,i)=>makePveAct2Enemy(stage.eLevel,i));
+  const result=simulateFight(atkDefs,defDefs);
+  state.combatLog=[{type:'pve2',stageName:stage.name,won:result.won,log:result.log,time:ts()},...(state.combatLog||[]).slice(0,19)];
+  if(result.won){
+    state.pveAct2Completed=[...(state.pveAct2Completed||[]),stageId];
+    state.genePoints+=stage.gpR;
+    if(stage.iconR&&!(state.ownedIcons||[]).includes(stage.iconR))
+      state.ownedIcons=[...(state.ownedIcons||[]),stage.iconR];
+    addLog(`🌟 ACT 2: "${stage.name}" cleared! +${stage.gpR}🧪`+(stage.iconR?` + icon ${stage.iconR}`:''),'gp');
+  } else {
+    addLog(`💀 ACT 2: "${stage.name}" failed. Prestige your immortals.`,'warn');
   }
   checkMilestones();renderAll();
 };
@@ -1059,13 +1243,13 @@ function renderCombat(){
     return;
   }
   let html=`<div class="combat-subtabs">
-    <button class="combat-stab ${combatSubTab==='pve'?'active':''}" onclick="setCombatTab('pve')">PVE CAMPAIGN</button>
+    <button class="combat-stab ${combatSubTab==='pve'?'active':''}" onclick="setCombatTab('pve')">ACT 1</button>
+    <button class="combat-stab ${combatSubTab==='pve2'?'active':''}" onclick="setCombatTab('pve2')">ACT 2</button>
     <button class="combat-stab ${combatSubTab==='pvp'?'active':''}" onclick="setCombatTab('pvp')">PVP</button>
   </div>`;
 
   if(combatSubTab==='pve'){
-    html+=`<p class="pve-intro">Fight 37 stages across 4 acts. Bosses (stages 10, 20, 30, 37) award exclusive icons. Deploy multiple fighters with Gene Point upgrades.</p>`;
-    // Slot upgrades
+    html+=`<p class="pve-intro">ACT 1 — 37 stages across 4 chapters. Bosses at stages 10, 20, 30, 37 award exclusive icons. Complete Act 1 to unlock Act 2 and Prestige.</p>`;
     html+=`<div class="slot-upgrades">`;
     COMBAT_SLOT_UPGRADES.forEach(upg=>{
       const owned=state.combatSlots>=upg.slots;
@@ -1077,57 +1261,141 @@ function renderCombat(){
       </div>`;
     });
     html+=`</div>`;
-
-    // Stages by act
     const acts=[1,2,3,4];
     const actNames=['ACT 1 — THE AWAKENING','ACT 2 — THE ARENA','ACT 3 — THE PANTHEON','ACT 4 — THE FINAL WAR'];
     acts.forEach((act,ai)=>{
       const stages=PVE_STAGES.filter(s=>s.act===act);
       html+=`<p class="act-title">${actNames[ai]}</p><div class="pve-grid">`;
-      stages.forEach((stage,si)=>{
+      stages.forEach((stage)=>{
         const globalIdx=PVE_STAGES.findIndex(s=>s.id===stage.id);
         const done=(state.pveCompleted||[]).includes(stage.id);
         const prevDone=globalIdx===0||(state.pveCompleted||[]).includes(PVE_STAGES[globalIdx-1].id);
         const locked=!prevDone&&!done;
         const iconOwned=stage.iconR&&(state.ownedIcons||[]).includes(stage.iconR);
         html+=`<div class="pve-card ${done?'cleared':locked?'locked':''} ${stage.boss?'boss-card':''}">
-          <div class="pve-name">${stage.boss?'':'#'+( globalIdx+1)+' '}${stage.name}</div>
+          <div class="pve-name">${stage.boss?'':'#'+(globalIdx+1)+' '}${stage.name}</div>
           <div class="pve-desc">${stage.desc}</div>
           <div class="pve-enemies">${stage.enemies} opponent${stage.enemies>1?'s':''} (level ${stage.eLevel})</div>
           <div class="pve-reward">+${stage.gpR} 🧪${stage.iconR?` <span class="icon-reward">${iconOwned?'✓':'+'}${stage.iconR}</span>`:''}</div>`;
-        if(done){
-          html+=`<div class="pve-cleared-badge">✓ CLEARED</div>`;
-        } else if(!locked){
+        if(done){ html+=`<div class="pve-cleared-badge">✓ CLEARED</div>`; }
+        else if(!locked){
           html+=`<div class="pve-selectors">`;
           for(let slot=0;slot<state.combatSlots;slot++){
             html+=`<select id="pve-sel-${stage.id}-${slot}"><option value="">— slot ${slot+1} (optional${slot===0?', required':''}) —</option>${immortals.map(im=>`<option value="${im.id}">${im.name}</option>`).join('')}</select>`;
           }
           html+=`</div>`;
-          html+=`<button class="btn-combat" onclick="(() => {
-            const ids=[];
-            for(let i=0;i<${state.combatSlots};i++){
-              const el=document.getElementById('pve-sel-${stage.id}-'+i);
-              if(el&&el.value)ids.push(el.value);
-            }
-            runPveStage('${stage.id}',ids);
-          })()">[ FIGHT ]</button>`;
-        } else {
-          html+=`<div style="color:var(--muted);font-size:10px;margin-top:4px">Complete previous stage first</div>`;
-        }
+          html+=`<button class="btn-combat" onclick="(()=>{const ids=[];for(let i=0;i<${state.combatSlots};i++){const el=document.getElementById('pve-sel-${stage.id}-'+i);if(el&&el.value)ids.push(el.value);}runPveStage('${stage.id}',ids);})()">[ FIGHT ]</button>`;
+        } else { html+=`<div style="color:var(--muted);font-size:10px;margin-top:4px">Complete previous stage first</div>`; }
         html+=`</div>`;
       });
       html+=`</div>`;
     });
-
-    // Last combat log
     if((state.combatLog||[]).length){
       const last=state.combatLog[0];
       html+=`<div class="combat-log-box"><p class="combat-log-title">// LAST FIGHT: ${last.stageName||''} — ${last.time||''}</p>`;
       last.log.forEach(line=>{
-        const cls=line.startsWith('🏆')||line.startsWith('✓')?'win':line.startsWith('💀')||line.startsWith('✗')?'loss':line.startsWith('💥')||line.startsWith('💫')?'crit':line.startsWith('──')?'section':'';
+        const cls=line.startsWith('🏆')||line.startsWith('✓')||line.startsWith('🌟')?'win':line.startsWith('💀')||line.startsWith('✗')?'loss':line.startsWith('💥')?'crit':line.startsWith('──')?'section':'';
         html+=`<div class="clog-line ${cls}">${line}</div>`;
       });
       html+=`</div>`;
+    }
+
+  } else if(combatSubTab==='pve2'){
+    const act1Done=(state.pveCompleted||[]).length>=PVE_STAGES.length;
+    const hasPrestiged=immortals.some(im=>im.prestiged);
+    if(!act1Done){
+      html+=`<div class="combat-locked" style="border-color:var(--score)">
+        🌟 ACT 2 — THE ASCENDANCY<br><br>
+        Complete all 37 stages of Act 1 to unlock Act 2.<br>
+        <span style="color:var(--muted);font-size:11px">Act 1 progress: ${(state.pveCompleted||[]).length} / ${PVE_STAGES.length}</span>
+      </div>`;
+    } else {
+      html+=`<p class="pve-intro" style="border-color:var(--score)">ACT 2 — THE ASCENDANCY. 33 stages of escalating difficulty. Bosses at stages 10, 20, 30, 33 award exclusive icons. Prestige your immortals to have any chance here.</p>`;
+      // Prestige section
+      html+=`<div style="border:1px solid var(--score);background:#0a080f;padding:14px 16px;margin-bottom:20px">
+        <p style="color:var(--score);font-size:10px;letter-spacing:3px;margin-bottom:12px">// PRESTIGE YOUR IMMORTALS</p>
+        <p style="color:var(--muted);font-size:11px;margin-bottom:12px">Requires all 37 Act 1 stages cleared + <strong style="color:var(--gp)">${PRESTIGE_GP_COST} 🧪</strong> + <strong style="color:var(--diamond)">${fmt(PRESTIGE_DIAMOND_COST)} 💎</strong> per immortal. Unlocks a powerful second skill tree.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">`;
+      immortals.forEach(im=>{
+        if(im.prestiged){
+          html+=`<div style="border:1px solid var(--score);padding:8px 12px;font-size:11px;color:var(--score)">🌟 ${im.name} — PRESTIGED</div>`;
+        } else {
+          const canPrestige=state.genePoints>=PRESTIGE_GP_COST&&state.diamonds>=PRESTIGE_DIAMOND_COST;
+          html+=`<button class="${canPrestige?'':''}btn-secondary" style="${canPrestige?'border-color:var(--score);color:var(--score);':''}font-size:11px;width:auto;padding:6px 12px" onclick="prestigeImmortal('${im.id}')">[ PRESTIGE ${im.name} ]</button>`;
+        }
+      });
+      html+=`</div></div>`;
+      // Act 2 stages
+      const a2acts=[{label:'THE ASCENDANCY (1-10)',min:0,max:9},{label:'THE RECKONING (11-20)',min:10,max:19},{label:'THE TRANSCENDENCE (21-30)',min:20,max:29},{label:'THE FINALE (31-33)',min:30,max:32}];
+      a2acts.forEach(section=>{
+        const stages=PVE_ACT2_STAGES.slice(section.min,section.max+1);
+        html+=`<p class="act-title" style="color:var(--score)">${section.label}</p><div class="pve-grid">`;
+        stages.forEach(stage=>{
+          const globalIdx=PVE_ACT2_STAGES.findIndex(s=>s.id===stage.id);
+          const done=(state.pveAct2Completed||[]).includes(stage.id);
+          const prevDone=globalIdx===0||(state.pveAct2Completed||[]).includes(PVE_ACT2_STAGES[globalIdx-1].id);
+          const locked=!prevDone&&!done;
+          const iconOwned=stage.iconR&&(state.ownedIcons||[]).includes(stage.iconR);
+          html+=`<div class="pve-card ${done?'cleared':locked?'locked':''} ${stage.boss?'boss-card':''}" style="${stage.boss?'border-color:var(--score)':''}">
+            <div class="pve-name" style="${stage.boss?'color:var(--score)':''}">ACT2 #${globalIdx+1} ${stage.name}</div>
+            <div class="pve-desc">${stage.desc}</div>
+            <div class="pve-enemies">${stage.enemies} opponent${stage.enemies>1?'s':''} (level ${stage.eLevel})</div>
+            <div class="pve-reward">+${stage.gpR} 🧪${stage.iconR?` <span class="icon-reward">${iconOwned?'✓':'+'}${stage.iconR}</span>`:''}</div>`;
+          if(done){ html+=`<div class="pve-cleared-badge">✓ CLEARED</div>`; }
+          else if(!locked){
+            html+=`<div class="pve-selectors">`;
+            for(let slot=0;slot<state.combatSlots;slot++){
+              html+=`<select id="a2-sel-${stage.id}-${slot}"><option value="">— slot ${slot+1} —</option>${immortals.map(im=>`<option value="${im.id}">${im.name}${im.prestiged?' 🌟':''}</option>`).join('')}</select>`;
+            }
+            html+=`</div>`;
+            html+=`<button class="btn-combat" style="border-color:var(--score);color:var(--score)" onclick="(()=>{const ids=[];for(let i=0;i<${state.combatSlots};i++){const el=document.getElementById('a2-sel-${stage.id}-'+i);if(el&&el.value)ids.push(el.value);}runAct2Stage('${stage.id}',ids);})()">[ FIGHT ]</button>`;
+          } else { html+=`<div style="color:var(--muted);font-size:10px;margin-top:4px">Complete previous stage first</div>`; }
+          html+=`</div>`;
+        });
+        html+=`</div>`;
+      });
+      // Prestige skill trees
+      const prestigedIms=immortals.filter(im=>im.prestiged);
+      if(prestigedIms.length){
+        html+=`<div style="margin-top:24px"><p style="color:var(--score);font-size:10px;letter-spacing:3px;margin-bottom:14px">// PRESTIGE SKILL TREES — ${fmt(state.genePoints)} 🧪 available</p>`;
+        prestigedIms.forEach(im=>{
+          const pStats=getPrestigeStats(im);
+          html+=`<div style="border:1px solid var(--score);background:#0a080f;padding:14px 16px;margin-bottom:12px">
+            <p style="color:var(--score);font-size:13px;margin-bottom:8px">🌟 ${im.name}</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;color:var(--muted)">
+              ${pStats.atk?`<span>+${pStats.atk} ATK</span>`:''}${pStats.spd?`<span>+${pStats.spd} SPD</span>`:''}${pStats.def?`<span>+${pStats.def} DEF</span>`:''}${pStats.hp?`<span>+${pStats.hp} HP</span>`:''}${pStats.crit?`<span>+${Math.round(pStats.crit*100)}% crit</span>`:''}${pStats.dodge?`<span>+${Math.round(pStats.dodge*100)}% dodge</span>`:''}${pStats.regen?`<span>+${pStats.regen} regen</span>`:''}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">`;
+          PRESTIGE_BRANCHES.forEach(branch=>{
+            html+=`<div><div style="font-size:9px;letter-spacing:1px;color:${branch.color};padding-bottom:5px;border-bottom:1px solid var(--border);margin-bottom:4px">${branch.name}</div>`;
+            branch.skills.forEach((skill,idx)=>{
+              const owned=(im.prestigeSkills||[]).includes(skill.id);
+              const prevOwned=idx===0||(im.prestigeSkills||[]).includes(branch.skills[idx-1].id);
+              const isLocked=!owned&&!prevOwned;
+              const canBuy=!owned&&prevOwned&&state.genePoints>=skill.cost;
+              if(idx>0) html+=`<div style="text-align:center;color:var(--border);font-size:9px">↓</div>`;
+              html+=`<div style="border:1px solid ${owned?branch.color:'var(--border)'};background:${owned?'#0a0808':'var(--surface)'};padding:7px 9px;${isLocked?'opacity:.3':''}${!owned&&!isLocked?'cursor:pointer':''}"
+                ${!owned&&!isLocked?`onclick="buyPrestigeSkill('${im.id}','${skill.id}')"`:''}> 
+                <div style="color:${owned?branch.color:'var(--text)'};font-size:10px;font-weight:bold">${skill.name}</div>
+                <div style="color:var(--muted);font-size:9px;margin:2px 0">${skill.effect}</div>
+                <div style="font-size:9px;color:${owned?branch.color:canBuy?'var(--gp)':isLocked?'var(--border)':'var(--muted)'}">${owned?'✓ ACTIVE':isLocked?'🔒 LOCKED':`${skill.cost} 🧪`}</div>
+              </div>`;
+            });
+            html+=`</div>`;
+          });
+          html+=`</div></div></div>`;
+        });
+        html+=`</div>`;
+      }
+      if((state.combatLog||[]).length){
+        const last=state.combatLog[0];
+        html+=`<div class="combat-log-box" style="margin-top:20px"><p class="combat-log-title">// LAST FIGHT: ${last.stageName||''}</p>`;
+        last.log.forEach(line=>{
+          const cls=line.startsWith('🏆')||line.startsWith('✓')||line.startsWith('🌟')?'win':line.startsWith('💀')?'loss':line.startsWith('──')?'section':'';
+          html+=`<div class="clog-line ${cls}">${line}</div>`;
+        });
+        html+=`</div>`;
+      }
     }
 
   } else {
