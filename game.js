@@ -1156,12 +1156,17 @@ function renderPopulation(){
   if(imSec){
     if(!immortals.length){imSec.innerHTML='';}
     else{
+      // Track which skill page each immortal is showing: 'base' or 'prestige'
+      window._imTab=window._imTab||{};
       let imHtml=`<p class="immortals-title" style="margin-bottom:14px">🔱 IMMORTALS — ${fmt(state.genePoints)} 🧪 available</p><div class="immortal-cards">`;
       immortals.forEach(im=>{
         const stats=getImmortalStats(im);
         const refund=disposalGpRefund(im);
+        // Default to prestige tab if prestiged and base is fully invested, else base
+        if(window._imTab[im.id]===undefined) window._imTab[im.id]=im.prestiged?'prestige':'base';
+        const activeTab=window._imTab[im.id];
         imHtml+=`<div class="immortal-card">
-          <div class="im-header"><span class="im-name">🔱 ${im.name}</span><span class="im-gp-info">Fitness ${im.fitness||'?'}</span></div>
+          <div class="im-header"><span class="im-name">${im.prestiged?'🌟':'🔱'} ${im.name}</span><span class="im-gp-info">Fitness ${im.fitness||'?'}</span></div>
           <div class="im-base-stats">
             <span class="im-stat">ATK <span>${stats.atk}</span></span>
             <span class="im-stat">SPD <span>${stats.spd}</span></span>
@@ -1170,33 +1175,76 @@ function renderPopulation(){
             ${stats.crit?`<span class="im-stat">CRIT <span>${Math.round(stats.crit*100)}%</span></span>`:''}
             ${stats.dodge?`<span class="im-stat">DODGE <span>${Math.round(stats.dodge*100)}%</span></span>`:''}
             ${stats.regen?`<span class="im-stat">REGEN <span>${stats.regen}/rnd</span></span>`:''}
-          </div>
-          <p class="im-skill-tree-label">// SKILL TREE</p>
-          <div class="im-skill-tree">`;
-        IM_BRANCHES.forEach(branch=>{
-          imHtml+=`<div class="im-branch"><div class="im-branch-title" style="color:${branch.color}">${branch.name}</div>`;
-          branch.skills.forEach((skill,idx)=>{
-            const owned=(im.skills||[]).includes(skill.id);
-            const blockedByOwned=skill.blocked_by.some(bid=>(im.skills||[]).includes(bid));
-            const prevOwned=!skill.requires||(im.skills||[]).includes(skill.requires);
-            const isLocked=!owned&&(!prevOwned||blockedByOwned);
-            const isBlocked=!owned&&blockedByOwned;
-            const canBuy=!owned&&prevOwned&&!blockedByOwned&&state.genePoints>=skill.cost;
-            const nodeCls=owned?'sk-owned':isBlocked?'sk-blocked':isLocked?'sk-locked':'sk-available';
-            if(idx>0) imHtml+=`<div class="im-connector ${owned?'conn-lit':''}" style="text-align:center;color:${owned?'var(--gp)':'var(--border)'};font-size:9px">↓</div>`;
-            imHtml+=`<div class="im-skill-node ${nodeCls}" ${(!owned&&!isLocked&&!isBlocked)?`onclick="buyImmortalSkill('${im.id}','${skill.id}')" title="Click to unlock"`:''}>
-              <div class="im-sn-name">${skill.name}</div>
-              <div class="im-sn-effect">${skill.effect}</div>`;
-            if(owned)imHtml+=`<div class="im-sn-cost owned">✓ ACTIVE</div>`;
-            else if(isBlocked)imHtml+=`<div class="im-sn-cost blocked">🚫 BLOCKED</div>`;
-            else if(isLocked)imHtml+=`<div class="im-sn-cost locked">🔒 LOCKED</div>`;
-            else imHtml+=`<div class="im-sn-cost ${canBuy?'afford':'noafford'}">${skill.cost} 🧪${canBuy?'':' (need more)'}</div>`;
+          </div>`;
+
+        // Tab bar
+        imHtml+=`<div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:10px">
+          <button onclick="window._imTab['${im.id}']='base';renderPopulation()" style="width:auto;border:none;border-bottom:2px solid ${activeTab==='base'?'var(--gp)':'transparent'};color:${activeTab==='base'?'var(--gp)':'var(--muted)'};font-size:10px;letter-spacing:1px;padding:6px 12px;margin:0;background:none">BASE SKILLS</button>
+          <button onclick="window._imTab['${im.id}']='prestige';renderPopulation()" style="width:auto;border:none;border-bottom:2px solid ${activeTab==='prestige'?'var(--score)':'transparent'};color:${activeTab==='prestige'?'var(--score)':'var(--muted)'};font-size:10px;letter-spacing:1px;padding:6px 12px;margin:0;background:none">${im.prestiged?'PRESTIGE SKILLS':'🔒 PRESTIGE'}</button>
+        </div>`;
+
+        if(activeTab==='base'){
+          imHtml+=`<div class="im-skill-tree">`;
+          IM_BRANCHES.forEach(branch=>{
+            imHtml+=`<div class="im-branch"><div class="im-branch-title" style="color:${branch.color}">${branch.name}</div>`;
+            branch.skills.forEach((skill,idx)=>{
+              const owned=(im.skills||[]).includes(skill.id);
+              const blockedByOwned=skill.blocked_by.some(bid=>(im.skills||[]).includes(bid));
+              const prevOwned=!skill.requires||(im.skills||[]).includes(skill.requires);
+              const isLocked=!owned&&(!prevOwned||blockedByOwned);
+              const isBlocked=!owned&&blockedByOwned;
+              const canBuy=!owned&&prevOwned&&!blockedByOwned&&state.genePoints>=skill.cost;
+              const nodeCls=owned?'sk-owned':isBlocked?'sk-blocked':isLocked?'sk-locked':'sk-available';
+              if(idx>0) imHtml+=`<div class="im-connector ${owned?'conn-lit':''}" style="text-align:center;color:${owned?'var(--gp)':'var(--border)'};font-size:9px">↓</div>`;
+              imHtml+=`<div class="im-skill-node ${nodeCls}" ${(!owned&&!isLocked&&!isBlocked)?`onclick="buyImmortalSkill('${im.id}','${skill.id}')" title="Click to unlock"`:''}>
+                <div class="im-sn-name">${skill.name}</div>
+                <div class="im-sn-effect">${skill.effect}</div>`;
+              if(owned) imHtml+=`<div class="im-sn-cost owned">✓ ACTIVE</div>`;
+              else if(isBlocked) imHtml+=`<div class="im-sn-cost blocked">🚫 BLOCKED</div>`;
+              else if(isLocked) imHtml+=`<div class="im-sn-cost locked">🔒 LOCKED</div>`;
+              else imHtml+=`<div class="im-sn-cost ${canBuy?'afford':'noafford'}">${skill.cost} 🧪${canBuy?'':' (need more)'}</div>`;
+              imHtml+=`</div>`;
+            });
             imHtml+=`</div>`;
           });
           imHtml+=`</div>`;
-        });
-        imHtml+=`</div>
-          <button onclick="disposeImmortal('${im.id}')" style="margin-top:10px;border-color:var(--red);color:var(--red);font-size:10px;padding:4px 10px;width:auto">[ DISPOSE — recover ${refund}🧪 ]</button>
+        } else {
+          // Prestige tab
+          if(!im.prestiged){
+            const act1Done=(state.pveCompleted||[]).length>=PVE_STAGES.length;
+            const canP=act1Done&&state.genePoints>=PRESTIGE_GP_COST&&state.diamonds>=PRESTIGE_DIAMOND_COST;
+            imHtml+=`<div style="color:var(--muted);font-size:11px;line-height:1.7;margin-bottom:12px">
+              Prestige unlocks a second, more powerful skill tree.<br>
+              <span style="color:${act1Done?'var(--text)':'var(--red)'}">Act 1 complete: ${act1Done?'✓':'✗ (required)'}</span><br>
+              <span style="color:var(--gp)">${PRESTIGE_GP_COST} 🧪</span> + <span style="color:var(--diamond)">${fmt(PRESTIGE_DIAMOND_COST)} 💎</span> required
+            </div>
+            <button onclick="prestigeImmortal('${im.id}')" style="border-color:var(--score);color:var(--score);font-size:11px;padding:6px 14px;width:auto;${canP?'':'opacity:.4;cursor:not-allowed'}">[ PRESTIGE ${im.name} ]</button>`;
+          } else {
+            imHtml+=`<div class="im-skill-tree">`;
+            PRESTIGE_BRANCHES.forEach(branch=>{
+              imHtml+=`<div class="im-branch"><div class="im-branch-title" style="color:${branch.color}">${branch.name}</div>`;
+              branch.skills.forEach((skill,idx)=>{
+                const owned=(im.prestigeSkills||[]).includes(skill.id);
+                const prevOwned=idx===0||(im.prestigeSkills||[]).includes(branch.skills[idx-1].id);
+                const isLocked=!owned&&!prevOwned;
+                const canBuy=!owned&&prevOwned&&state.genePoints>=skill.cost;
+                const nodeCls=owned?'sk-owned':isLocked?'sk-locked':'sk-available';
+                if(idx>0) imHtml+=`<div class="im-connector ${owned?'conn-lit':''}" style="text-align:center;color:${owned?branch.color:'var(--border)'};font-size:9px">↓</div>`;
+                imHtml+=`<div class="im-skill-node ${nodeCls}" style="${owned?`border-color:${branch.color};background:#0a0808`:''}" ${(!owned&&!isLocked)?`onclick="buyPrestigeSkill('${im.id}','${skill.id}')" title="Click to unlock"`:''}>
+                  <div class="im-sn-name" style="${owned?`color:${branch.color}`:''}"> ${skill.name}</div>
+                  <div class="im-sn-effect">${skill.effect}</div>`;
+                if(owned) imHtml+=`<div class="im-sn-cost owned" style="color:${branch.color}">✓ ACTIVE</div>`;
+                else if(isLocked) imHtml+=`<div class="im-sn-cost locked">🔒 LOCKED</div>`;
+                else imHtml+=`<div class="im-sn-cost ${canBuy?'afford':'noafford'}">${skill.cost} 🧪${canBuy?'':' (need more)'}</div>`;
+                imHtml+=`</div>`;
+              });
+              imHtml+=`</div>`;
+            });
+            imHtml+=`</div>`;
+          }
+        }
+
+        imHtml+=`<button onclick="disposeImmortal('${im.id}')" style="margin-top:10px;border-color:var(--red);color:var(--red);font-size:10px;padding:4px 10px;width:auto">[ DISPOSE — recover ${refund}🧪 ]</button>
         </div>`;
       });
       imHtml+=`</div><div style="border-bottom:1px solid var(--border);margin:20px 0"></div>`;
@@ -1354,39 +1402,6 @@ function renderCombat(){
         });
         html+=`</div>`;
       });
-      // Prestige skill trees
-      const prestigedIms=immortals.filter(im=>im.prestiged);
-      if(prestigedIms.length){
-        html+=`<div style="margin-top:24px"><p style="color:var(--score);font-size:10px;letter-spacing:3px;margin-bottom:14px">// PRESTIGE SKILL TREES — ${fmt(state.genePoints)} 🧪 available</p>`;
-        prestigedIms.forEach(im=>{
-          const pStats=getPrestigeStats(im);
-          html+=`<div style="border:1px solid var(--score);background:#0a080f;padding:14px 16px;margin-bottom:12px">
-            <p style="color:var(--score);font-size:13px;margin-bottom:8px">🌟 ${im.name}</p>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;color:var(--muted)">
-              ${pStats.atk?`<span>+${pStats.atk} ATK</span>`:''}${pStats.spd?`<span>+${pStats.spd} SPD</span>`:''}${pStats.def?`<span>+${pStats.def} DEF</span>`:''}${pStats.hp?`<span>+${pStats.hp} HP</span>`:''}${pStats.crit?`<span>+${Math.round(pStats.crit*100)}% crit</span>`:''}${pStats.dodge?`<span>+${Math.round(pStats.dodge*100)}% dodge</span>`:''}${pStats.regen?`<span>+${pStats.regen} regen</span>`:''}
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">`;
-          PRESTIGE_BRANCHES.forEach(branch=>{
-            html+=`<div><div style="font-size:9px;letter-spacing:1px;color:${branch.color};padding-bottom:5px;border-bottom:1px solid var(--border);margin-bottom:4px">${branch.name}</div>`;
-            branch.skills.forEach((skill,idx)=>{
-              const owned=(im.prestigeSkills||[]).includes(skill.id);
-              const prevOwned=idx===0||(im.prestigeSkills||[]).includes(branch.skills[idx-1].id);
-              const isLocked=!owned&&!prevOwned;
-              const canBuy=!owned&&prevOwned&&state.genePoints>=skill.cost;
-              if(idx>0) html+=`<div style="text-align:center;color:var(--border);font-size:9px">↓</div>`;
-              html+=`<div style="border:1px solid ${owned?branch.color:'var(--border)'};background:${owned?'#0a0808':'var(--surface)'};padding:7px 9px;${isLocked?'opacity:.3':''}${!owned&&!isLocked?'cursor:pointer':''}"
-                ${!owned&&!isLocked?`onclick="buyPrestigeSkill('${im.id}','${skill.id}')"`:''}> 
-                <div style="color:${owned?branch.color:'var(--text)'};font-size:10px;font-weight:bold">${skill.name}</div>
-                <div style="color:var(--muted);font-size:9px;margin:2px 0">${skill.effect}</div>
-                <div style="font-size:9px;color:${owned?branch.color:canBuy?'var(--gp)':isLocked?'var(--border)':'var(--muted)'}">${owned?'✓ ACTIVE':isLocked?'🔒 LOCKED':`${skill.cost} 🧪`}</div>
-              </div>`;
-            });
-            html+=`</div>`;
-          });
-          html+=`</div></div></div>`;
-        });
-        html+=`</div>`;
-      }
       if((state.combatLog||[]).length){
         const last=state.combatLog[0];
         html+=`<div class="combat-log-box" style="margin-top:20px"><p class="combat-log-title">// LAST FIGHT: ${last.stageName||''}</p>`;
