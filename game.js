@@ -2061,10 +2061,11 @@ function renderMilestones(){
   const c=document.getElementById('milestones-container');if(!c)return;
   const ms=getMilestoneCounts();
   let html=`<p class="ms-total">Completed: <span>${fmt(ms.done)} / ${fmt(ms.total)}</span> &nbsp;|&nbsp; 🧪 Gene Points: <span style="color:var(--gp)">${fmt(state.genePoints)}</span></p>`;
+  html+=`<p class="ms-cat-title">// MILESTONES</p><div class="track-grid">`;
   MILESTONE_TRACKS.forEach(track=>{
     const prog=getTrackProg(track);
     const completedN=prog.ci+1,allDone=completedN===prog.tot;
-    html+=`<p class="ms-cat-title">// ${track.name}</p><div class="track-grid"><div class="track-card ${allDone?'tc-complete':completedN>0?'tc-active':''}">`;
+    html+=`<div class="track-card ${allDone?'tc-complete':completedN>0?'tc-active':''}">`;
     html+=`<div class="track-header"><span class="track-name">${track.name}</span><span class="track-tier ${allDone?'all-done':''}">TIER ${completedN} / ${prog.tot}</span></div>`;
     html+=`<div class="track-current-name">${prog.cur?prog.cur.name:'Not started'}</div>`;
     if(!allDone&&prog.nxt){
@@ -2074,8 +2075,9 @@ function renderMilestones(){
     } else if(allDone){html+=`<div class="track-complete-badge">✦ ALL TIERS COMPLETE</div>`;}
     html+=`<div class="track-dots">`;
     prog.tot>0&&[...Array(prog.tot)].forEach((_,i)=>{html+=`<div class="track-dot ${i<=prog.ci?'filled':i===prog.ci+1?'current':''}"></div>`;});
-    html+=`</div></div></div>`;
+    html+=`</div></div>`;
   });
+  html+=`</div>`;
   const hasDecoder=safeNum(state.upgrades?.secretDecoder)>0;
   html+=`<p class="ms-cat-title secret-title">// ??? SECRETS — +💎 +5🧪 each${hasDecoder?' <span style="color:var(--diamond);font-size:9px">[DECODER ACTIVE]</span>':''}</p><div class="secret-grid">`;
   SECRET_MILESTONES.forEach(m=>{
