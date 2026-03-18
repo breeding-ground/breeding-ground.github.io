@@ -612,7 +612,6 @@ const SECRET_MILESTONES=[
   {id:'ms_s_refresh',   name:'Refresh Addict',     desc:'Refresh the leaderboard 20 times.',                                 check:s=>safeNum(s.lbRefreshCount)>=20,  gp:5},
   {id:'ms_s_auto',      name:'Auto Addict',        desc:'Let the auto-breeder run 500 breeds without a single manual breed.',check:s=>safeNum(s.autoOnlyBreeds)>=500, gp:5},
   {id:'ms_s_complete',  name:'Completionist',      desc:`Own all ${TOTAL_ICONS} icons.`,                                     check:s=>(s.ownedIcons||[]).length>=TOTAL_ICONS, gp:5},
-  {id:'ms_s_pvpwin',    name:'The Challenger',     desc:'Win your first PvP fight.',                                         check:s=>safeNum(s.pvpWins)>=1,          gp:5},
   {id:'ms_s_dispose',   name:'Necessary Evil',     desc:'Dispose of an immortal.',                                           check:s=>!!s.hasDisposedImmortal,        gp:5},
   {id:'ms_s_vault_max', name:'Hoarder Supreme',    desc:'Fully collect all 25 icons from any single Gene Vault.',            check:s=>GENE_VAULTS.some(v=>v.icons.every(ic=>(s.ownedIcons||[]).includes(ic))), gp:5},
   {id:'ms_s_broke_dia', name:'Diamond Broke',      desc:'Spend every last diamond — reach exactly 0 💎.',                   check:s=>s.diamonds===0&&safeNum(s.totalDiamondsEarned)>=50, gp:5},
@@ -1400,8 +1399,10 @@ window.cityUpgradeRI2=(immortalId)=>{
 window.cityUpgradeRI3=()=>{
   if(state.city.riLevel>=3)return addLog('Already at Level 3.','warn');
   if(state.city.riLevel<2)return addLog('Upgrade to Level 2 first.','warn');
-  // Exclude the RI Level 3 milestone itself (mt_ri_3) — it's awarded after upgrading, not before
-  const EXCLUDED=['mt_ri_3'];
+  // Exclude milestones that are impossible without RI Level 3:
+  // mt_ri_3 = the RI L3 milestone itself
+  // mt_ris_40 = requires 40 RI skills, but 10 of them need RI L3 first
+  const EXCLUDED=['mt_ri_3','mt_ris_40'];
   const allIds=[...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)].filter(id=>!EXCLUDED.includes(id));
   const done=allIds.filter(id=>state.completedMilestones.includes(id)).length;
   const total=allIds.length;
@@ -2344,7 +2345,7 @@ function renderCity(){
         ${eligible.length?eligible.map(im=>`<button onclick="cityUpgradeRI2('${im.id}')" style="width:auto;padding:4px 12px;margin:0 6px 4px 0;font-size:11px;border-color:var(--score);color:var(--score)">[ Sacrifice ${esc(im.name)} ]</button>`).join(''):`<p style="color:var(--red);font-size:11px">No eligible immortals — need fully maxed + fully prestiged.</p>`}
       </div>`;
     } else if(city.riLevel<3){
-      const EXCL3=['mt_ri_3'];
+      const EXCL3=['mt_ri_3','mt_ris_40'];
       const allIds3=[...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)].filter(id=>!EXCL3.includes(id));
       const done3=allIds3.filter(id=>state.completedMilestones.includes(id)).length;
       const total3=allIds3.length;
