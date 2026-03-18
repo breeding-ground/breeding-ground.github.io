@@ -413,6 +413,7 @@ h2:first-child { margin-top:0; }
   overflow:hidden; padding:4px;
 }
 .city-tile:hover { border-color:var(--green); background:var(--surface2); }
+.city-tile-open  { border-color:var(--green) !important; background:var(--surface2) !important; }
 .city-tile-built { border-width:2px; }
 .city-tile-empty { border-style:dashed; opacity:.6; }
 .city-tile-emoji { font-size:20px; line-height:1; margin-bottom:2px; display:block; }
