@@ -1330,7 +1330,7 @@ window.cityRemoveCell=(key)=>{
   if(old==='genespire'&&state.city.spireTiers)delete state.city.spireTiers[key];
   window._openTileKey=null;
   addLog(`🏙️ Removed ${CITY_BUILDINGS[old]?.name||old}.`,'highlight');
-  renderCity();
+  renderStats();renderCity();
 };
 window.upgradeGenespireCell=(key)=>{
   if(state.city.grid[key]!=='genespire')return;
@@ -1344,7 +1344,7 @@ window.upgradeGenespireCell=(key)=>{
   if(!state.city.spireTiers)state.city.spireTiers={};
   state.city.spireTiers[key]=curTier+1;
   addLog(`🧬 Spire → Tier ${curTier+1} (${next.gpH} 🧪/hr).`,'gp');
-  renderCity();
+  renderStats();renderCity();
 };
 window.citySetCell=(key,buildingId)=>{
   if(!isCityUnlocked())return;
@@ -1356,7 +1356,7 @@ window.citySetCell=(key,buildingId)=>{
   if(!state.city.grid)state.city.grid={};
   state.city.grid[key]=buildingId;
   addLog(`🏙️ ${CITY_BUILDINGS[buildingId].name} placed.`,'highlight');
-  renderCity();
+  renderStats();renderCity();
 };
 // Research Institute: build (riLevel 0 → 1)
 window.cityBuildRI=()=>{
@@ -1431,7 +1431,7 @@ window.saveCityName=()=>{
   if(val.length>20)return addLog('City name max 20 chars.','warn');
   state.city.name=val;
   addLog(`🏙️ City renamed to "${val}".`,'highlight');
-  renderCity();
+  renderStats();renderCity();
 };
 
 // Set city banner colour
@@ -1439,7 +1439,7 @@ window.saveCityBanner=()=>{
   const val=document.getElementById('city-banner-input')?.value||'#39ff14';
   state.city.bannerColor=val;
   addLog('🏙️ Banner colour updated.','highlight');
-  renderCity();
+  renderStats();renderCity();
 };
 
 // Set city motto
@@ -1448,7 +1448,7 @@ window.saveCityMotto=()=>{
   if(val.length>60)return addLog('Motto max 60 chars.','warn');
   state.city.motto=val;
   addLog('🏙️ Motto updated.','highlight');
-  renderCity();
+  renderStats();renderCity();
 };
 
 // Toggle monument icon
@@ -1459,7 +1459,7 @@ window.toggleMonumentIcon=(icon)=>{
   if(cur.includes(icon)){state.city.monumentIcons=cur.filter(x=>x!==icon);}
   else if(cur.length<maxSlots){state.city.monumentIcons=[...cur,icon];}
   else return addLog(`Monument has ${maxSlots} slots. Remove one first.`,'warn');
-  renderCity();
+  renderStats();renderCity();
 };
 
 window.openPvpModal=(targetUid,targetName)=>{
