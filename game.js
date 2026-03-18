@@ -2452,7 +2452,7 @@ window.renderLeaderboard=(entries,currentUid)=>{
       window._pvpTargets[key]={uid:e.uid,username:e.username||'Anonymous'};
       fightBtn=`<button class="lb-fight-btn" onclick="window._pvpFight('${key}')">⚔</button>`;
     }
-    const visitBtn=!isYou&&e.hasCityData?`<button class="lb-fight-btn" style="border-color:var(--score);color:var(--score)" onclick="window.visitCity('${e.uid}','${esc(e.username||'Anonymous')}')">🏙️</button>`:'';
+    const visitBtn=!isYou?`<button class="lb-fight-btn" style="border-color:var(--score);color:var(--score)" onclick="window.visitCity('${e.uid}','${esc(e.username||'Anonymous')}')">🏙️</button>`:'';
     const btns=[fightBtn,visitBtn].filter(Boolean).join(' ');
     html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(e.displayScore)}</td><td>${msDisplay}</td><td>${fmt(safeNum(e.generation))}</td><td>${btns}</td></tr>`;
   });
