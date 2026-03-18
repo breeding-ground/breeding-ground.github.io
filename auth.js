@@ -422,34 +422,61 @@ window._visitCityFromAuth = async (uid, username) => {
   modal.classList.remove('hidden');
   try {
     const snap = await getDoc(doc(db, 'saves', uid));
-    if (!snap.exists()) { bodyEl.innerHTML = '<p style="color:var(--muted)">This player has no city yet.</p>'; return; }
+    if (!snap.exists()) { bodyEl.innerHTML = '<p style="color:var(--muted)">This player has no save yet.</p>'; return; }
     const data = snap.data();
     const city = data.city || {};
-    const slots = city.slots || [];
     const banner = city.bannerColor || 'var(--score)';
-    const BLDG = { breeding:'🏗️ Breeding Hall', culling:'⚗️ Culling Hall', monument:'🗿 Monument', research:'🏛️ Research Institute' };
+    const BLDG_EMO = { research:'🏛️', breeding:'🏗️', culling:'⚗️', monument:'🗿', genespire:'🧬' };
+    const BLDG_COL = { research:'var(--score)', breeding:'var(--gold)', culling:'var(--diamond)', monument:'#818cf8', genespire:'var(--gp)' };
+    const BLDG_LBL = { research:'Institute', breeding:'Breeding', culling:'Culling', monument:'Monument', genespire:'Gene Spire' };
+
+    // Support both new grid format and old slots array
+    const grid = city.grid && typeof city.grid === 'object' && !Array.isArray(city.grid) ? city.grid : {};
+    const oldSlots = Array.isArray(city.slots) ? city.slots : [];
+    if (!Object.keys(grid).length && oldSlots.length) {
+      oldSlots.forEach((b, i) => { if (b) grid[`${i},0`] = b; });
+    }
+    const gridEntries = Object.entries(grid).filter(([,v]) => v);
+
     let html = `<div style="border-left:3px solid ${banner};padding-left:12px;margin-bottom:16px">`;
-    if (city.name) html += `<div style="color:${banner};font-size:16px;margin-bottom:4px">${esc(city.name)}</div>`;
-    if (city.motto) html += `<div style="color:var(--muted);font-size:11px;font-style:italic">"${esc(city.motto)}"</div>`;
+    if (city.name) html += `<div style="color:${banner};font-size:16px;margin-bottom:4px">${city.name}</div>`;
+    if (city.motto) html += `<div style="color:var(--muted);font-size:11px;font-style:italic">"${city.motto}"</div>`;
     html += `</div>`;
-    const filledSlots = slots.filter(Boolean);
-    if (!filledSlots.length) { html += '<p style="color:var(--muted);font-size:12px">This city is still under construction.</p>'; }
-    else {
-      html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:16px">`;
-      slots.forEach((s, i) => {
-        if (!s) return;
-        const isRI = s === 'research';
-        const label = BLDG[s] || s;
-        const col = isRI ? 'var(--score)' : s === 'breeding' ? 'var(--gold)' : s === 'culling' ? 'var(--diamond)' : 'var(--diamond)';
-        html += `<div style="border:1px solid ${col};background:var(--surface);padding:10px;text-align:center;border-radius:50%;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <div style="font-size:20px">${label.split(' ')[0]}</div>
-          <div style="color:${col};font-size:9px;margin-top:4px;letter-spacing:1px">${label.split(' ').slice(1).join(' ')}</div>
-        </div>`;
+
+    if (!gridEntries.length) {
+      html += '<p style="color:var(--muted);font-size:12px">This city is still under construction.</p>';
+    } else {
+      // Render a mini version of their grid
+      const xs = gridEntries.map(([k]) => parseInt(k.split(',')[0]));
+      const ys = gridEntries.map(([k]) => parseInt(k.split(',')[1]));
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+      const cols = maxX - minX + 1;
+      html += `<div style="display:grid;grid-template-columns:repeat(${cols},52px);gap:3px;margin-bottom:16px">`;
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const b = grid[`${x},${y}`];
+          const col = b ? (BLDG_COL[b] || 'var(--muted)') : 'transparent';
+          const emo = b ? (BLDG_EMO[b] || '?') : '';
+          const lbl = b ? (BLDG_LBL[b] || b) : '';
+          html += `<div style="border:${b ? `2px solid ${col}` : '1px dashed #222'};background:${b ? 'var(--surface)' : 'transparent'};width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+            <div style="font-size:18px">${emo}</div>
+            <div style="color:${col};font-size:7px;letter-spacing:.5px">${lbl}</div>
+          </div>`;
+        }
+      }
+      html += `</div>`;
+      // Building summary
+      const counts = {};
+      gridEntries.forEach(([,b]) => { counts[b] = (counts[b]||0)+1; });
+      html += `<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:12px">`;
+      Object.entries(counts).forEach(([b,n]) => {
+        html += `<span style="color:${BLDG_COL[b]||'var(--muted)'}">${BLDG_EMO[b]||'?'} ${n}× ${BLDG_LBL[b]||b}</span>`;
       });
       html += `</div>`;
     }
     const mIcons = city.monumentIcons || [];
-    if (mIcons.length) html += `<p style="color:var(--muted);font-size:11px;margin-bottom:4px">Monument:</p><div style="font-size:24px;letter-spacing:6px">${mIcons.join('')}</div>`;
+    if (mIcons.length) html += `<p style="color:var(--muted);font-size:11px;margin-bottom:4px">🗿 Monument:</p><div style="font-size:22px;letter-spacing:5px">${mIcons.join('')}</div>`;
     bodyEl.innerHTML = html;
   } catch(e) { console.error(e); bodyEl.innerHTML = '<p style="color:var(--red)">Failed to load city.</p>'; }
 };
