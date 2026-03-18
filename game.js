@@ -374,45 +374,34 @@ const CITY_BUILDINGS={
       {tier:5,gpH:10, costGold:0,      costDia:100000, label:'Tier 5',desc:'10 🧪/hr — 100,000 💎'},
     ]},
 };
-function getSpireTier(slotIdx){return safeNum((state.city.spireTiers||{})[slotIdx],1);}
+// Grid helpers — city uses {"x,y": buildingId} map
+function cityGrid(){return state.city?.grid||{};}
+function cityGridValues(){return Object.values(cityGrid());}
+function cityGridEntries(){return Object.entries(cityGrid());}
+function getSpireTier(key){return safeNum((state.city.spireTiers||{})[key],1);}
 function getTotalSpireGpH(){
-  const slots=state.city.slots||[];
   let total=0;
   const tiers=CITY_BUILDINGS.genespire.tiers;
-  slots.forEach((s,i)=>{
-    if(s==='genespire'){
-      const t=getSpireTier(i);
-      const tierDef=tiers.find(x=>x.tier===t)||tiers[0];
-      total+=tierDef.gpH;
-    }
+  cityGridEntries().forEach(([key,b])=>{
+    if(b==='genespire'){const t=getSpireTier(key);total+=(tiers.find(x=>x.tier===t)||tiers[0]).gpH;}
   });
   return total;
 }
 function getBreedingHallLevel(){
-  const bred=safeNum(state.totalBred);
-  const lvls=CITY_BUILDINGS.breeding.levels;
-  let level=0;
-  for(let i=0;i<lvls.length;i++){if(bred>=lvls[i].target)level=i+1;}
-  return level;
+  const bred=safeNum(state.totalBred),lvls=CITY_BUILDINGS.breeding.levels;
+  let level=0;for(let i=0;i<lvls.length;i++){if(bred>=lvls[i].target)level=i+1;}return level;
 }
 function getBreedingHallRate(){
-  const lvl=getBreedingHallLevel();
-  if(!lvl)return 0;
-  const b=getCityBonuses();
-  return CITY_BUILDINGS.breeding.levels[lvl-1].gpH*b.breedingHallMult*b.allGoldMult;
+  const lvl=getBreedingHallLevel();if(!lvl)return 0;
+  const b=getCityBonuses();return CITY_BUILDINGS.breeding.levels[lvl-1].gpH*b.breedingHallMult*b.allGoldMult;
 }
 function getCullingHallLevel(){
-  const culled=safeNum(state.totalCulled);
-  const lvls=CITY_BUILDINGS.culling.levels;
-  let level=0;
-  for(let i=0;i<lvls.length;i++){if(culled>=lvls[i].target)level=i+1;}
-  return level;
+  const culled=safeNum(state.totalCulled),lvls=CITY_BUILDINGS.culling.levels;
+  let level=0;for(let i=0;i<lvls.length;i++){if(culled>=lvls[i].target)level=i+1;}return level;
 }
 function getCullingHallRate(){
-  const lvl=getCullingHallLevel();
-  if(!lvl)return 0;
-  const b=getCityBonuses();
-  return CITY_BUILDINGS.culling.levels[lvl-1].diaH*b.allDiaMult;
+  const lvl=getCullingHallLevel();if(!lvl)return 0;
+  const b=getCityBonuses();return CITY_BUILDINGS.culling.levels[lvl-1].diaH*b.allDiaMult;
 }
 const PVE_ACT2_STAGES=[
   // Act 2 — The Ascendancy (stages 1-9, needs 1-2 fully skilled immortals or 1 prestiged)
@@ -669,7 +658,7 @@ function defaultState(){
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
     vault_predator_opens:0,vault_ancient_opens:0,vault_machine_opens:0,
     immortals:[],combatSlots:1,pveCompleted:[],pveAct2Completed:[],pveAct3Completed:[],pvpWins:0,pvpLosses:0,combatLog:[],
-    city:{name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,slots:[null,null,null,null,null,null,null,null],monumentIcons:[],lastGoldTick:null,goldBuffer:0,spireTiers:{}},
+    city:{name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,grid:{},monumentIcons:[],lastGoldTick:null,goldBuffer:0,spireTiers:{}},
     loginStreak:0,lastLoginDate:null,totalLoginDays:0,loginRewardsClaimed:[],
     research:{labInterns:0,geneAnalysts:0,lineageArchivists:0,headOfResearch:false,automatedSequencer:false},
     upgrades:{popCap:0,mutation:0,traitAmp:0,breedYield:0,cullValue:0,selective:0,cullInsight:0,lineageMem:0,hybridVigor:0,adaptiveGenetics:0,autoBreeder:0,traitCapBoost:0,eliteMutation:0,deepArchive:0,secretDecoder:0},
@@ -820,15 +809,25 @@ function sanitiseState(s){
     loginStreak:safeNum(s.loginStreak),lastLoginDate:s.lastLoginDate||null,
     totalLoginDays:safeNum(s.totalLoginDays),loginRewardsClaimed:Array.isArray(s.loginRewardsClaimed)?s.loginRewardsClaimed:[],
     combatLog:Array.isArray(s.combatLog)?s.combatLog:[],
-    city:{
-      name:s.city?.name||'',bannerColor:s.city?.bannerColor||'',motto:s.city?.motto||'',
-      riLevel:safeNum(s.city?.riLevel),riSkills:Array.isArray(s.city?.riSkills)?s.city.riSkills:[],
-      sacrificedImmortalId:s.city?.sacrificedImmortalId||null,
-      slots:Array.isArray(s.city?.slots)?s.city.slots:[null,null,null,null,null,null,null,null],
-      monumentIcons:Array.isArray(s.city?.monumentIcons)?s.city.monumentIcons:[],
-      lastGoldTick:s.city?.lastGoldTick||null,goldBuffer:safeNum(s.city?.goldBuffer),
-      spireTiers:s.city?.spireTiers&&typeof s.city.spireTiers==='object'?s.city.spireTiers:{},
-    },
+    city:(()=>{
+      const c=s.city||{};
+      // Migrate old slots array → grid map if needed
+      let grid=c.grid&&typeof c.grid==='object'&&!Array.isArray(c.grid)?{...c.grid}:{};
+      const oldSlots=Array.isArray(c.slots)?c.slots:null;
+      if(oldSlots&&Object.keys(grid).length===0){
+        oldSlots.forEach((b,i)=>{if(b){grid[`${i},0`]=b;}});
+      }
+      // Ensure RI is at 0,0 if built
+      if(!grid['0,0']&&c.riLevel>0)grid['0,0']='research';
+      return{
+        name:c.name||'',bannerColor:c.bannerColor||'',motto:c.motto||'',
+        riLevel:safeNum(c.riLevel),riSkills:Array.isArray(c.riSkills)?c.riSkills:[],
+        sacrificedImmortalId:c.sacrificedImmortalId||null,
+        grid,monumentIcons:Array.isArray(c.monumentIcons)?c.monumentIcons:[],
+        lastGoldTick:c.lastGoldTick||null,goldBuffer:safeNum(c.goldBuffer),
+        spireTiers:c.spireTiers&&typeof c.spireTiers==='object'&&!Array.isArray(c.spireTiers)?c.spireTiers:{},
+      };
+    })(),
     research:{labInterns:safeNum(s.research?.labInterns),geneAnalysts:safeNum(s.research?.geneAnalysts),lineageArchivists:safeNum(s.research?.lineageArchivists),headOfResearch:!!s.research?.headOfResearch,automatedSequencer:!!s.research?.automatedSequencer},
     upgrades:{popCap:safeNum(s.upgrades?.popCap),mutation:safeNum(s.upgrades?.mutation),traitAmp:safeNum(s.upgrades?.traitAmp),breedYield:safeNum(s.upgrades?.breedYield),cullValue:safeNum(s.upgrades?.cullValue),selective:safeNum(s.upgrades?.selective),cullInsight:safeNum(s.upgrades?.cullInsight),lineageMem:safeNum(s.upgrades?.lineageMem),hybridVigor:safeNum(s.upgrades?.hybridVigor),adaptiveGenetics:safeNum(s.upgrades?.adaptiveGenetics),autoBreeder:safeNum(s.upgrades?.autoBreeder),traitCapBoost:safeNum(s.upgrades?.traitCapBoost),eliteMutation:safeNum(s.upgrades?.eliteMutation),deepArchive:safeNum(s.upgrades?.deepArchive),secretDecoder:safeNum(s.upgrades?.secretDecoder)},
     population:(s.population||[]).map(migrateCrature).filter(Boolean),
@@ -1304,7 +1303,7 @@ function tickCityGold(){
     if(earned>0){state.gold+=earned;state.totalGoldEarned+=earned;addLog(`🏗️ Breeding Hall: +${fmt(earned)} gold (${fmt1(hoursElapsed)}h).`,'highlight');}
   }
   // Culling Hall → diamonds
-  if((state.city.slots||[]).includes('culling')){
+  if(cityGridValues().includes('culling')){
     const chRate=getCullingHallRate();
     if(chRate>0){
       const earned=Math.floor(chRate*hoursElapsed);
@@ -1312,7 +1311,7 @@ function tickCityGold(){
     }
   }
   // Gene Spires → gene points
-  if((state.city.slots||[]).includes('genespire')){
+  if(cityGridValues().includes('genespire')){
     const spireRate=getTotalSpireGpH();
     if(spireRate>0){
       const earned=Math.floor(spireRate*hoursElapsed);
@@ -1324,60 +1323,49 @@ function tickCityGold(){
 window.tickCityGold=tickCityGold;
 
 // Remove a building from a slot
-window.cityRemoveSlot=(slotIdx)=>{
-  if(slotIdx===0)return addLog('The Research Institute slot cannot be removed.','warn');
-  if(!state.city.slots[slotIdx])return;
-  const old=state.city.slots[slotIdx];
-  state.city.slots[slotIdx]=null;
-  // Clear spire tier if removing a spire
-  if(old==='genespire'&&state.city.spireTiers) delete state.city.spireTiers[slotIdx];
-  window._openTileIdx=null;
-  addLog(`🏙️ Removed ${CITY_BUILDINGS[old]?.name||old} from slot ${slotIdx+1}.`,'highlight');
+window.cityRemoveCell=(key)=>{
+  if(key==='0,0')return addLog('The Research Institute cannot be removed.','warn');
+  const g=state.city.grid;if(!g[key])return;
+  const old=g[key];delete g[key];
+  if(old==='genespire'&&state.city.spireTiers)delete state.city.spireTiers[key];
+  window._openTileKey=null;
+  addLog(`🏙️ Removed ${CITY_BUILDINGS[old]?.name||old}.`,'highlight');
   renderCity();
 };
-window.upgradeGenespire=(slotIdx)=>{
-  if(state.city.slots[slotIdx]!=='genespire')return;
-  const tiers=CITY_BUILDINGS.genespire.tiers;
-  const curTier=getSpireTier(slotIdx);
-  if(curTier>=tiers.length)return addLog('Gene Spire already at maximum tier.','warn');
-  const next=tiers.find(t=>t.tier===curTier+1);
-  if(!next)return;
-  if(next.costGold>0&&state.gold<next.costGold)return addLog(`Need ${fmt(next.costGold)} gold to upgrade.`,'warn');
-  if(next.costDia>0&&state.diamonds<next.costDia)return addLog(`Need ${fmt(next.costDia)} 💎 to upgrade.`,'warn');
-  if(next.costGold>0){state.gold-=next.costGold;}
+window.upgradeGenespireCell=(key)=>{
+  if(state.city.grid[key]!=='genespire')return;
+  const tiers=CITY_BUILDINGS.genespire.tiers,curTier=getSpireTier(key);
+  if(curTier>=tiers.length)return addLog('Gene Spire already at max tier.','warn');
+  const next=tiers.find(t=>t.tier===curTier+1);if(!next)return;
+  if(next.costGold>0&&state.gold<next.costGold)return addLog(`Need ${fmt(next.costGold)} gold.`,'warn');
+  if(next.costDia>0&&state.diamonds<next.costDia)return addLog(`Need ${fmt(next.costDia)} 💎.`,'warn');
+  if(next.costGold>0)state.gold-=next.costGold;
   if(next.costDia>0){state.diamonds-=next.costDia;state.totalDiamondsSpent=safeNum(state.totalDiamondsSpent)+next.costDia;}
   if(!state.city.spireTiers)state.city.spireTiers={};
-  state.city.spireTiers[slotIdx]=curTier+1;
-  addLog(`🧬 Slot ${slotIdx+1} spire → Tier ${curTier+1} (${next.gpH} 🧪/hr).`,'gp');
+  state.city.spireTiers[key]=curTier+1;
+  addLog(`🧬 Spire → Tier ${curTier+1} (${next.gpH} 🧪/hr).`,'gp');
   renderCity();
 };
-// Build a slot
-window.citySetSlot=(slotIdx,buildingId)=>{
+window.citySetCell=(key,buildingId)=>{
   if(!isCityUnlocked())return;
-  const slots=getCitySlots();
-  if(slotIdx>=slots)return addLog('That slot is not yet unlocked (1 per 10,000 generations).','warn');
-  if(slotIdx===0)return addLog('Slot 0 is reserved for the Research Institute.','warn');
   if(!CITY_BUILDINGS[buildingId])return addLog('Unknown building.','warn');
-  // Enforce max 10 per production building
-  const MAX_PROD=10;
-  if(buildingId==='breeding'||buildingId==='culling'||buildingId==='genespire'){
-    const count=(state.city.slots||[]).filter(s=>s===buildingId).length;
-    if(count>=MAX_PROD)return addLog(`Maximum ${MAX_PROD} ${CITY_BUILDINGS[buildingId].name}s already placed.`,'warn');
+  if(['breeding','culling','genespire'].includes(buildingId)){
+    const count=cityGridValues().filter(s=>s===buildingId).length;
+    if(count>=10)return addLog(`Maximum 10 ${CITY_BUILDINGS[buildingId].name}s.`,'warn');
   }
-  // Grow slots array if needed
-  while(state.city.slots.length<=slotIdx) state.city.slots.push(null);
-  state.city.slots[slotIdx]=buildingId;
-  addLog(`🏙️ Slot ${slotIdx+1}: ${CITY_BUILDINGS[buildingId].name} placed.`,'highlight');
+  if(!state.city.grid)state.city.grid={};
+  state.city.grid[key]=buildingId;
+  addLog(`🏙️ ${CITY_BUILDINGS[buildingId].name} placed.`,'highlight');
   renderCity();
 };
-
 // Research Institute: build (riLevel 0 → 1)
 window.cityBuildRI=()=>{
   if(!isCityUnlocked())return;
   if(state.city.riLevel>=1)return addLog('Research Institute already built.','warn');
   state.city.riLevel=1;
-  state.city.slots[0]='research';
-  addLog('🏛️ Research Institute built! Skill tree unlocked.','highlight');
+  if(!state.city.grid)state.city.grid={};
+  state.city.grid['0,0']='research';
+  addLog('🏛️ Research Institute built!','highlight');
   checkMilestones();renderCity();
 };
 
@@ -2138,220 +2126,231 @@ function renderGeneVault(){
   c.innerHTML=html;
 }
 
-window._openTileIdx=null;
-window.openCityTile=(idx)=>{
+window._openTileKey=null;
+window.openCityTile=(key)=>{
   const editor=document.getElementById('city-tile-editor');
   const content=document.getElementById('city-tile-editor-content');
   if(!editor||!content)return;
-  // Toggle off if clicking same tile
-  if(window._openTileIdx===idx&&!editor.classList.contains('hidden')){
-    editor.classList.add('hidden');window._openTileIdx=null;return;
+  if(window._openTileKey===key&&!editor.classList.contains('hidden')){
+    editor.classList.add('hidden');window._openTileKey=null;return;
   }
-  window._openTileIdx=idx;
+  window._openTileKey=key;
   editor.classList.remove('hidden');
   const city=state.city;
-  const isRI=idx===0;
-  const b=city.slots[idx]||null;
-  const bhCount=(city.slots||[]).filter(s=>s==='breeding').length;
-  const chCount=(city.slots||[]).filter(s=>s==='culling').length;
+  const g=city.grid||{};
+  const b=g[key]||null;
+  const isRI=key==='0,0';
   const bhLevel=getBreedingHallLevel();
   const chLevel=getCullingHallLevel();
-  let h=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="color:var(--text);font-size:12px">Slot ${idx+1}</span><button onclick="document.getElementById('city-tile-editor').classList.add('hidden');window._openTileIdx=null;" style="width:auto;padding:2px 8px;margin:0;font-size:10px;border-color:var(--muted);color:var(--muted)">[ CLOSE ]</button></div>`;
-  if(isRI){
-    if(!b){
-      h+=`<p style="color:var(--muted);font-size:11px;margin-bottom:8px">🏛️ The Research Institute is the heart of your city. Build it here.</p>
-          <button onclick="cityBuildRI()" style="width:auto;padding:6px 14px;margin:0;border-color:var(--score);color:var(--score)">[ BUILD RESEARCH INSTITUTE ]</button>`;
-    } else {
-      h+=`<p style="color:var(--score);font-size:12px;margin-bottom:4px">🏛️ Research Institute — Level ${city.riLevel} / 3</p>
-          <p style="color:var(--muted);font-size:11px">The Institute cannot be removed.</p>`;
-    }
+  const vals=cityGridValues();
+  const bhCount=vals.filter(s=>s==='breeding').length;
+  const chCount=vals.filter(s=>s==='culling').length;
+  const spCount=vals.filter(s=>s==='genespire').length;
+  let h=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span style="color:var(--muted);font-size:11px">Tile ${key}</span>
+    <button onclick="document.getElementById('city-tile-editor').classList.add('hidden');window._openTileKey=null;" style="width:auto;padding:2px 8px;margin:0;font-size:10px;border-color:var(--muted);color:var(--muted)">[ CLOSE ]</button>
+  </div>`;
+  if(isRI&&!b){
+    h+=`<p style="color:var(--muted);font-size:11px;margin-bottom:8px">🏛️ The Research Institute is the heart of your city.</p>
+        <button onclick="cityBuildRI()" style="width:auto;padding:6px 14px;margin:0;border-color:var(--score);color:var(--score)">[ BUILD RESEARCH INSTITUTE ]</button>`;
+  } else if(isRI&&b){
+    h+=`<p style="color:var(--score);font-size:12px;margin-bottom:4px">🏛️ Research Institute — Level ${city.riLevel} / 3</p>
+        <p style="color:var(--muted);font-size:11px">The Institute cannot be removed.</p>`;
   } else if(!b){
-    h+=`<p style="color:var(--muted);font-size:11px;margin-bottom:10px">Choose what to build in this slot:</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">`;
-    const opts=[
-      {id:'breeding',emoji:'🏗️',name:'Breeding Hall',desc:`Generates ${fmt(10000)}–${fmt(50000)} gold/hr. Scales with total breeds.`,max:10,cur:bhCount},
-      {id:'culling', emoji:'⚗️',name:'Culling Hall', desc:`Generates ${fmt(1000)}–${fmt(10000)} 💎/hr. Scales with total culls.`,max:10,cur:chCount},
-      {id:'monument',emoji:'🗿',name:'Monument',     desc:'Display your icon collection to visiting players.',max:999,cur:0},
-      {id:'genespire',emoji:'🧬',name:'Gene Spire',  desc:`Generates 1–10 🧪/hr. Upgrade individually. Tiers: free / 500k gold / 1m gold / 2m gold / 100k 💎.`,max:10,cur:(state.city.slots||[]).filter(s=>s==='genespire').length},
-    ];
-    opts.forEach(o=>{
+    h+=`<p style="color:var(--muted);font-size:11px;margin-bottom:10px">Build something here:</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">`;
+    [{id:'breeding',emoji:'🏗️',name:'Breeding Hall',desc:`${fmt(10000)}–${fmt(50000)} gold/hr. Scales with total breeds.`,max:10,cur:bhCount},
+     {id:'culling', emoji:'⚗️',name:'Culling Hall', desc:`${fmt(1000)}–${fmt(10000)} 💎/hr. Scales with total culls.`,max:10,cur:chCount},
+     {id:'monument',emoji:'🗿',name:'Monument',     desc:'Display your icon collection to visitors.',max:999,cur:0},
+     {id:'genespire',emoji:'🧬',name:'Gene Spire',  desc:'1–10 🧪/hr. Upgrade individually.',max:10,cur:spCount},
+    ].forEach(o=>{
       const atMax=o.cur>=o.max;
-      h+=`<div style="border:1px solid ${atMax?'var(--border)':'var(--dimgreen)'};background:var(--surface);padding:10px;opacity:${atMax?.5:1}">
-        <div style="font-size:20px">${o.emoji}</div>
-        <div style="color:var(--text);font-size:12px;margin:4px 0">${o.name}</div>
-        <div style="color:var(--muted);font-size:10px;margin-bottom:8px">${o.desc}</div>
-        <div style="color:var(--muted);font-size:9px;margin-bottom:6px">${o.cur}/${o.max} placed</div>
-        ${atMax?`<div style="color:var(--red);font-size:10px">MAX REACHED</div>`:`<button onclick="citySetSlot(${idx},'${o.id}')" style="width:auto;padding:4px 10px;margin:0;font-size:10px">[ BUILD ]</button>`}
+      h+=`<div style="border:1px solid ${atMax?'var(--border)':'var(--border)'};background:var(--surface);padding:10px;opacity:${atMax?.45:1}">
+        <div style="font-size:18px;margin-bottom:4px">${o.emoji}</div>
+        <div style="color:var(--text);font-size:11px;margin-bottom:4px">${o.name}</div>
+        <div style="color:var(--muted);font-size:9px;margin-bottom:6px">${o.desc}</div>
+        <div style="color:var(--muted);font-size:9px;margin-bottom:6px">${o.cur}/${o.max}</div>
+        ${atMax?`<span style="color:var(--red);font-size:9px">MAX</span>`:`<button onclick="citySetCell('${key}','${o.id}')" style="width:auto;padding:3px 10px;margin:0;font-size:10px">[ BUILD ]</button>`}
       </div>`;
     });
     h+=`</div>`;
   } else {
     const bldg=CITY_BUILDINGS[b];
-    h+=`<p style="font-size:20px;margin-bottom:4px">${{breeding:'🏗️',culling:'⚗️',monument:'🗿'}[b]||'?'}</p>
-        <p style="color:var(--text);font-size:12px;margin-bottom:4px">${bldg?.name||b}</p>
-        <p style="color:var(--muted);font-size:11px;margin-bottom:10px">${bldg?.desc||''}</p>`;
-    if(b==='breeding'){h+=`<p style="color:var(--gold);font-size:11px;margin-bottom:10px">Level ${bhLevel}/4 · ${bhLevel?fmt(getBreedingHallRate())+' gold/hr':'Inactive'}</p>`;}
-    if(b==='culling'){h+=`<p style="color:var(--diamond);font-size:11px;margin-bottom:10px">Level ${chLevel}/4 · ${chLevel?fmt(getCullingHallRate())+' 💎/hr':'Inactive'}</p>`;}
-    if(b==='monument'){const mi=city.monumentIcons||[];const mm=3+getCityBonuses().monumentIconBonus;h+=`<p style="color:#818cf8;font-size:11px;margin-bottom:10px">${mi.join('')||'No icons'} (${mi.length}/${mm})</p>`;}
+    const emo={breeding:'🏗️',culling:'⚗️',monument:'🗿',genespire:'🧬'}[b]||'?';
+    h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:22px">${emo}</span>
+      <div><div style="color:var(--text);font-size:12px">${bldg?.name||b}</div>
+      <div style="color:var(--muted);font-size:10px">${bldg?.desc||''}</div></div>
+    </div>`;
+    if(b==='breeding')h+=`<p style="color:var(--gold);font-size:11px;margin-bottom:10px">Level ${bhLevel}/4 · ${bhLevel?fmt(getBreedingHallRate())+' gold/hr':'Inactive — need 10k breeds'}</p>`;
+    if(b==='culling') h+=`<p style="color:var(--diamond);font-size:11px;margin-bottom:10px">Level ${chLevel}/4 · ${chLevel?fmt(getCullingHallRate())+' 💎/hr':'Inactive — need 1k culls'}</p>`;
+    if(b==='monument'){const mi=city.monumentIcons||[];const mm=3+getCityBonuses().monumentIconBonus;h+=`<p style="color:#818cf8;font-size:11px;margin-bottom:10px">${mi.join('')||'—'} (${mi.length}/${mm} icons)</p>`;}
     if(b==='genespire'){
-      const curTier=getSpireTier(idx);
+      const curTier=getSpireTier(key);
       const tiers=CITY_BUILDINGS.genespire.tiers;
       const curDef=tiers.find(t=>t.tier===curTier)||tiers[0];
       const nextDef=tiers.find(t=>t.tier===curTier+1);
       h+=`<p style="color:var(--gp);font-size:11px;margin-bottom:6px">Tier ${curTier}/5 · ${curDef.gpH} 🧪/hr</p>`;
       if(nextDef){
-        const canUpg=(nextDef.costGold>0&&state.gold>=nextDef.costGold)||(nextDef.costDia>0&&state.diamonds>=nextDef.costDia)||(nextDef.costGold===0&&nextDef.costDia===0);
-        h+=`<p style="color:var(--muted);font-size:10px;margin-bottom:8px">Next: Tier ${nextDef.tier} → ${nextDef.gpH} 🧪/hr · ${nextDef.costGold>0?fmt(nextDef.costGold)+' gold':nextDef.costDia>0?fmt(nextDef.costDia)+' 💎':'free'}</p>
-        <button onclick="upgradeGenespire(${idx})" style="width:auto;padding:5px 12px;margin:0 8px 10px 0;font-size:10px;border-color:var(--gp);color:var(--gp);${canUpg?'':'opacity:.4;cursor:not-allowed'}">[ UPGRADE → TIER ${nextDef.tier} ]</button>`;
-      } else {
-        h+=`<p style="color:var(--gp);font-size:11px;margin-bottom:10px">✦ MAX TIER</p>`;
-      }
-      // Show all tier progression
-      h+=`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">`;
-      tiers.forEach(t=>{
-        const done=curTier>=t.tier;
-        h+=`<div style="border:1px solid ${done?'var(--gp)':'var(--border)'};padding:4px 8px;font-size:9px;color:${done?'var(--gp)':'var(--muted)'}${curTier===t.tier?' font-weight:bold':''}">${t.gpH}🧪${done?'✓':''}</div>`;
-      });
+        const canUpg=(nextDef.costGold===0&&nextDef.costDia===0)||(nextDef.costGold>0&&state.gold>=nextDef.costGold)||(nextDef.costDia>0&&state.diamonds>=nextDef.costDia);
+        h+=`<p style="color:var(--muted);font-size:9px;margin-bottom:8px">→ Tier ${nextDef.tier}: ${nextDef.gpH} 🧪/hr · ${nextDef.costGold>0?fmt(nextDef.costGold)+' gold':nextDef.costDia>0?fmt(nextDef.costDia)+' 💎':'free'}</p>
+        <button onclick="upgradeGenespireCell('${key}')" style="width:auto;padding:4px 10px;margin:0 8px 10px 0;font-size:10px;border-color:var(--gp);color:var(--gp);${canUpg?'':'opacity:.4'}">[ UPGRADE → T${nextDef.tier} ]</button>`;
+      } else h+=`<p style="color:var(--gp);font-size:11px;margin-bottom:10px">✦ MAX TIER</p>`;
+      h+=`<div style="display:flex;gap:3px;margin-bottom:10px">`;
+      tiers.forEach(t=>{const done=curTier>=t.tier;h+=`<div style="border:1px solid ${done?'var(--gp)':'var(--border)'};padding:3px 6px;font-size:8px;color:${done?'var(--gp)':'var(--muted)'}">${t.gpH}🧪</div>`;});
       h+=`</div>`;
     }
+    h+=`<button onclick="cityRemoveCell('${key}')" style="width:auto;padding:4px 12px;margin-top:4px;font-size:10px;border-color:var(--red);color:var(--red)">[ REMOVE BUILDING ]</button>`;
   }
   content.innerHTML=h;
 };
 
 function renderCity(){
   const c=document.getElementById('city-container');if(!c)return;
-  // Ensure city object exists (guard against old saves)
-  if(!state.city||typeof state.city!=='object'){
-    state.city={name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,
-      slots:[null,null,null,null,null,null,null,null],monumentIcons:[],lastGoldTick:null,goldBuffer:0,spireTiers:{}};
-  }
+  if(!state.city||typeof state.city!=='object')state.city={name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,grid:{},monumentIcons:[],lastGoldTick:null,goldBuffer:0,spireTiers:{}};
+  if(!state.city.grid||typeof state.city.grid!=='object'||Array.isArray(state.city.grid))state.city.grid={};
   if(!state.city.spireTiers)state.city.spireTiers={};
   try{
   const act2Done=(state.pveAct2Completed||[]).length>=PVE_ACT2_STAGES.length;
   if(!act2Done){
-    c.innerHTML=`<div class="combat-locked" style="border-color:var(--score)">
-      🏙️ YOUR CITY<br><br>
-      Complete all 33 stages of Act 2 to unlock your city.<br>
-      <span style="color:var(--muted);font-size:11px">Act 2 progress: ${(state.pveAct2Completed||[]).length} / ${PVE_ACT2_STAGES.length}</span>
-    </div>`;
+    c.innerHTML=`<div class="combat-locked" style="border-color:var(--score)">🏙️ YOUR CITY<br><br>Complete all 33 Act 2 stages to unlock your city.<br><span style="color:var(--muted);font-size:11px">Progress: ${(state.pveAct2Completed||[]).length} / ${PVE_ACT2_STAGES.length}</span></div>`;
     return;
   }
   tickCityGold();
   const slots=getCitySlots();
   const cb=getCityBonuses();
   const city=state.city;
+  const g=city.grid||{};
   const bhLevel=getBreedingHallLevel();
   const bhRate=getBreedingHallRate();
-  // Declare counts early — avoids temporal dead zone if referenced in template literals
-  const bhCount=(city.slots||[]).filter(s=>s==='breeding').length;
-  const chCount=(city.slots||[]).filter(s=>s==='culling').length;
-  const spireCount=(city.slots||[]).filter(s=>s==='genespire').length;
+  const vals=cityGridValues();
+  const bhCount=vals.filter(s=>s==='breeding').length;
+  const chCount=vals.filter(s=>s==='culling').length;
+  const spCount=vals.filter(s=>s==='genespire').length;
   const totalSpireGpH=getTotalSpireGpH();
+  const usedSlots=Object.keys(g).length;
+  const banner=city.bannerColor||'var(--score)';
 
   let html='';
   // Header
-  const banner=city.bannerColor||'var(--score)';
-  html+=`<div style="border-left:4px solid ${banner};padding-left:16px;margin-bottom:20px">
-    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
-      <span style="color:${banner};font-size:20px;letter-spacing:2px">${city.name||'Unnamed City'}</span>
-      <button onclick="(()=>{const d=document.getElementById('city-edit-panel');d.classList.toggle('hidden');})()" style="width:auto;font-size:10px;padding:3px 10px;margin:0;border-color:var(--muted);color:var(--muted)">[ EDIT ]</button>
+  html+=`<div style="border-left:4px solid ${banner};padding-left:16px;margin-bottom:18px">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <span style="color:${banner};font-size:18px;letter-spacing:2px">${city.name||'Unnamed City'}</span>
+      <button onclick="(()=>{const d=document.getElementById('city-edit-panel');d.classList.toggle('hidden');})()" style="width:auto;font-size:10px;padding:2px 8px;margin:0;border-color:var(--muted);color:var(--muted)">[ EDIT ]</button>
     </div>
-    ${city.motto?`<p style="color:var(--muted);font-size:11px;margin-top:4px;font-style:italic">"${esc(city.motto)}"</p>`:''}
-    <p style="color:var(--muted);font-size:10px;margin-top:6px">${fmt(slots)} slots (1 per 10,000 gen) &nbsp;·&nbsp; 🏗️ ${bhCount}/10 &nbsp;·&nbsp; ⚗️ ${chCount}/10 &nbsp;·&nbsp; 🧬 ${spireCount}/10${totalSpireGpH>0?` (${totalSpireGpH}🧪/hr)`:''}
-</p>
+    ${city.motto?`<p style="color:var(--muted);font-size:11px;margin-top:3px;font-style:italic">"${esc(city.motto)}"</p>`:''}
+    <p style="color:var(--muted);font-size:10px;margin-top:5px">${usedSlots}/${slots} slots used (${fmt(slots-usedSlots)} free) &nbsp;·&nbsp; 🏗️${bhCount}/10 &nbsp;·&nbsp; ⚗️${chCount}/10 &nbsp;·&nbsp; 🧬${spCount}/10${totalSpireGpH?` (${totalSpireGpH}🧪/hr)`:''}</p>
   </div>`;
 
   // Edit panel
-  html+=`<div id="city-edit-panel" class="hidden" style="border:1px solid var(--border);background:var(--surface);padding:14px;margin-bottom:20px">
-    <p style="color:var(--text);font-size:10px;letter-spacing:2px;margin-bottom:12px">// EDIT CITY</p>
+  html+=`<div id="city-edit-panel" class="hidden" style="border:1px solid var(--border);background:var(--surface);padding:12px;margin-bottom:16px">
     <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
-      <label style="color:var(--muted);font-size:11px;width:80px">Name:</label>
-      <input id="city-name-input" value="${esc(city.name)}" placeholder="City name" style="flex:1;min-width:120px" maxlength="20" />
-      <button onclick="saveCityName()" style="width:auto;padding:6px 12px;margin:0;font-size:11px">[ SAVE ]</button>
+      <label style="color:var(--muted);font-size:11px;width:60px">Name:</label>
+      <input id="city-name-input" value="${esc(city.name)}" placeholder="City name" style="flex:1;min-width:100px" maxlength="20"/>
+      <button onclick="saveCityName()" style="width:auto;padding:4px 10px;margin:0;font-size:11px">[ SAVE ]</button>
     </div>
     ${cb.bannerUnlocked?`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
-      <label style="color:var(--muted);font-size:11px;width:80px">Banner:</label>
-      <input type="color" id="city-banner-input" value="${city.bannerColor||'#39ff14'}" style="height:32px;width:60px;border:1px solid var(--border);background:none;cursor:pointer" />
-      <button onclick="saveCityBanner()" style="width:auto;padding:6px 12px;margin:0;font-size:11px">[ SAVE ]</button>
+      <label style="color:var(--muted);font-size:11px;width:60px">Banner:</label>
+      <input type="color" id="city-banner-input" value="${city.bannerColor||'#39ff14'}" style="height:28px;width:50px;border:1px solid var(--border);background:none;cursor:pointer"/>
+      <button onclick="saveCityBanner()" style="width:auto;padding:4px 10px;margin:0;font-size:11px">[ SAVE ]</button>
     </div>`:''}
-    ${cb.mottoUnlocked?`<div style="display:flex;gap:8px;margin-bottom:0;align-items:center;flex-wrap:wrap">
-      <label style="color:var(--muted);font-size:11px;width:80px">Motto:</label>
-      <input id="city-motto-input" value="${esc(city.motto)}" placeholder="City motto" style="flex:1;min-width:120px" maxlength="60" />
-      <button onclick="saveCityMotto()" style="width:auto;padding:6px 12px;margin:0;font-size:11px">[ SAVE ]</button>
+    ${cb.mottoUnlocked?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="color:var(--muted);font-size:11px;width:60px">Motto:</label>
+      <input id="city-motto-input" value="${esc(city.motto)}" placeholder="City motto" style="flex:1;min-width:100px" maxlength="60"/>
+      <button onclick="saveCityMotto()" style="width:auto;padding:4px 10px;margin:0;font-size:11px">[ SAVE ]</button>
     </div>`:''}
   </div>`;
 
-  // ── EMOJI CITY GRID ──────────────────────────────────────
-  // Building config: emoji, colour, tooltip line
-  const BLDG_DISPLAY={
-    research: {emoji:'🏛️', color:'var(--score)',  label:'Institute',  tip:`RI Lv${city.riLevel} · ${(city.riSkills||[]).length}/40 skills`},
-    breeding: {emoji:'🏗️', color:'var(--gold)',   label:'Breeding',   tip:`${bhLevel?fmt(bhRate)+'g/hr':'Inactive'}`},
-    culling:  {emoji:'⚗️', color:'var(--diamond)',label:'Culling',    tip:`${getCullingHallLevel()?fmt(getCullingHallRate())+'💎/hr':'Inactive'}`},
-    monument: {emoji:'🗿', color:'#818cf8',       label:'Monument',   tip:`${(city.monumentIcons||[]).join('')||'No icons'}`},
-    genespire:{emoji:'🧬', color:'var(--gp)',     label:'Gene Spire', tip:(i)=>`T${getSpireTier(i)} · ${CITY_BUILDINGS.genespire.tiers.find(t=>t.tier===getSpireTier(i))?.gpH||1}🧪/hr`},
+  // ── 2D GRID ─────────────────────────────────────────────
+  html+=`<p style="color:var(--text);font-size:10px;letter-spacing:3px;margin-bottom:8px">// CITY GRID — click to manage · ➕ to expand</p>`;
+
+  // Compute bounding box of existing cells + adjacent empties
+  const keys=Object.keys(g);
+  let minX=0,maxX=0,minY=0,maxY=0;
+  if(keys.length){
+    keys.forEach(k=>{const[x,y]=k.split(',').map(Number);minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);});
+  }
+  // Expand bounds by 1 in each direction to show expansion tiles
+  const gMinX=minX-1,gMaxX=maxX+1,gMinY=minY-1,gMaxY=maxY+1;
+
+  const BLDG_D={
+    research:{emoji:'🏛️',color:'var(--score)',label:'Institute'},
+    breeding:{emoji:'🏗️',color:'var(--gold)',  label:'Breeding'},
+    culling: {emoji:'⚗️',color:'var(--diamond)',label:'Culling'},
+    monument:{emoji:'🗿',color:'#818cf8',       label:'Monument'},
+    genespire:{emoji:'🧬',color:'var(--gp)',    label:'Spire'},
   };
-  const GRID_COLS=6;
 
-  html+=`<p style="color:var(--text);font-size:10px;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">// CITY GRID — click a tile to manage it</p>`;
-  html+=`<div class="city-emoji-grid">`;
+  html+=`<div class="city-emoji-grid" style="grid-template-columns:repeat(${gMaxX-gMinX+1},72px)">`;
+  for(let y=gMinY;y<=gMaxY;y++){
+    for(let x=gMinX;x<=gMaxX;x++){
+      const key=`${x},${y}`;
+      const b=g[key]||null;
+      // Is this adjacent to an existing cell?
+      const adj=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>g[`${x+dx},${y+dy}`]);
+      const isOrigin=x===0&&y===0;
+      const open=window._openTileKey===key;
 
-  for(let i=0;i<slots;i++){
-    const b=city.slots[i]||null;
-    const isRI=i===0;
-    if(b){
-      const d=BLDG_DISPLAY[b]||{emoji:'❓',color:'var(--muted)',label:'?',tip:''};
-      const tipStr=typeof d.tip==='function'?d.tip(i):d.tip;
-      html+=`<div class="city-tile city-tile-built" style="border-color:${d.color}" onclick="openCityTile(${i})" title="${esc(tipStr)}">
-        <span class="city-tile-emoji">${d.emoji}</span>
-        <span class="city-tile-label" style="color:${d.color}">${d.label}</span>
-        ${isRI?`<span class="city-tile-sub">Lv ${city.riLevel}</span>`:`<span class="city-tile-sub">${tipStr}</span>`}
-      </div>`;
-    } else {
-      html+=`<div class="city-tile city-tile-empty" onclick="openCityTile(${i})" title="Empty — click to build">
-        <span class="city-tile-emoji" style="opacity:.25">➕</span>
-        <span class="city-tile-label" style="color:var(--border)">Empty</span>
-        <span class="city-tile-sub" style="color:var(--border)">Slot ${i+1}</span>
-      </div>`;
+      if(b){
+        const d=BLDG_D[b]||{emoji:'?',color:'var(--muted)',label:'?'};
+        const sub=b==='genespire'?`T${getSpireTier(key)}·${(CITY_BUILDINGS.genespire.tiers.find(t=>t.tier===getSpireTier(key))||CITY_BUILDINGS.genespire.tiers[0]).gpH}🧪/hr`:
+                   b==='breeding'?`${bhLevel?fmt(bhRate)+'g/hr':'inactive'}`:
+                   b==='culling'?`${getCullingHallLevel()?fmt(getCullingHallRate())+'💎/hr':'inactive'}`:
+                   b==='research'?`Lv${city.riLevel}`:'';
+        html+=`<div class="city-tile city-tile-built ${open?'city-tile-open':''}" style="border-color:${d.color}" onclick="openCityTile('${key}')">
+          <span class="city-tile-emoji">${d.emoji}</span>
+          <span class="city-tile-label" style="color:${d.color}">${d.label}</span>
+          <span class="city-tile-sub">${sub}</span>
+        </div>`;
+      } else if(adj||isOrigin){
+        // Show as expansion tile only if we have free slots
+        const canExpand=usedSlots<slots;
+        if(canExpand){
+          html+=`<div class="city-tile city-tile-empty" onclick="openCityTile('${key}')" title="Expand here" style="${open?'border-color:var(--green);':''}">
+            <span class="city-tile-emoji" style="opacity:.4;font-size:16px">➕</span>
+            <span class="city-tile-label" style="color:var(--border);font-size:7px">${x},${y}</span>
+          </div>`;
+        } else {
+          html+=`<div class="city-tile city-tile-empty" style="opacity:.15;cursor:default">
+            <span class="city-tile-emoji" style="font-size:12px">🔒</span>
+          </div>`;
+        }
+      } else {
+        // Empty non-adjacent — invisible spacer
+        html+=`<div class="city-tile" style="border:none;background:transparent;cursor:default"></div>`;
+      }
     }
   }
   html+=`</div>`;
 
-  // Inline tile editor (shows below grid, toggled by openCityTile)
-  html+=`<div id="city-tile-editor" class="hidden" style="border:1px solid var(--border);background:var(--surface);padding:14px;margin-top:12px;margin-bottom:20px">
+  // Inline tile editor
+  html+=`<div id="city-tile-editor" class="${window._openTileKey?'':'hidden'}" style="border:1px solid var(--border);background:var(--surface);padding:14px;margin-top:8px;margin-bottom:20px">
     <div id="city-tile-editor-content"></div>
   </div>`;
 
-
-  // Research Institute full panel
-  if(city.slots[0]==='research'){
-    html+=`<div style="margin-top:28px"><p style="color:var(--score);font-size:10px;letter-spacing:3px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #1a0a2a">// RESEARCH INSTITUTE — LEVEL ${city.riLevel} / 3</p>`;
-
-    // RI level upgrade buttons
+  // Research Institute panel
+  if(g['0,0']==='research'){
+    html+=`<div style="margin-top:24px"><p style="color:var(--score);font-size:10px;letter-spacing:3px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #1a0a2a">// RESEARCH INSTITUTE — LEVEL ${city.riLevel} / 3</p>`;
     if(city.riLevel<2){
-      const mortals=state.immortals||[];
-      const allPrestigeIds=PRESTIGE_BRANCHES.flatMap(b=>b.skills.map(s=>s.id));
-      const eligible=mortals.filter(im=>im.prestiged&&allPrestigeIds.every(id=>(im.prestigeSkills||[]).includes(id)));
-      html+=`<div style="border:1px solid #2a1a3a;background:#0a0508;padding:14px;margin-bottom:20px">
-        <p style="color:var(--score);font-size:11px;margin-bottom:8px">Upgrade to Level 2</p>
-        <p style="color:var(--muted);font-size:11px;line-height:1.6;margin-bottom:10px">Sacrifice a fully maxed + fully prestiged immortal (all base + all prestige skills).</p>
-        ${eligible.length?eligible.map(im=>`<button onclick="cityUpgradeRI2('${im.id}')" style="width:auto;padding:5px 12px;margin:0 6px 4px 0;font-size:11px;border-color:var(--score);color:var(--score)">[ Sacrifice ${esc(im.name)} ]</button>`).join(''):'<p style="color:var(--red);font-size:11px">No eligible immortals — need fully maxed + fully prestiged.</p>'}
+      const allPIds=PRESTIGE_BRANCHES.flatMap(b=>b.skills.map(s=>s.id));
+      const eligible=(state.immortals||[]).filter(im=>im.prestiged&&allPIds.every(id=>(im.prestigeSkills||[]).includes(id)));
+      html+=`<div style="border:1px solid #2a1a3a;background:#0a0508;padding:12px;margin-bottom:16px">
+        <p style="color:var(--score);font-size:11px;margin-bottom:6px">Upgrade to Level 2</p>
+        <p style="color:var(--muted);font-size:11px;margin-bottom:8px">Sacrifice a fully maxed + fully prestiged immortal (all base + all prestige skills).</p>
+        ${eligible.length?eligible.map(im=>`<button onclick="cityUpgradeRI2('${im.id}')" style="width:auto;padding:4px 12px;margin:0 6px 4px 0;font-size:11px;border-color:var(--score);color:var(--score)">[ Sacrifice ${esc(im.name)} ]</button>`).join(''):`<p style="color:var(--red);font-size:11px">No eligible immortals — need fully maxed + fully prestiged.</p>`}
       </div>`;
     } else if(city.riLevel<3){
-      const ms=getMilestoneCounts();
-      const canL3=ms.done>=ms.total;
-      html+=`<div style="border:1px solid #2a1a3a;background:#0a0508;padding:14px;margin-bottom:20px">
-        <p style="color:var(--score);font-size:11px;margin-bottom:8px">Upgrade to Level 3</p>
-        <p style="color:var(--muted);font-size:11px;line-height:1.6;margin-bottom:10px">Complete every single milestone: <strong style="color:${canL3?'var(--green)':'var(--red)'}">${ms.done} / ${ms.total}</strong></p>
-        <button onclick="cityUpgradeRI3()" style="width:auto;padding:6px 14px;margin:0;font-size:11px;${canL3?'border-color:var(--score);color:var(--score)':'opacity:.4;cursor:not-allowed'}">[ UPGRADE TO LEVEL 3 ]</button>
+      const ms=getMilestoneCounts();const canL3=ms.done>=ms.total;
+      html+=`<div style="border:1px solid #2a1a3a;background:#0a0508;padding:12px;margin-bottom:16px">
+        <p style="color:var(--score);font-size:11px;margin-bottom:6px">Upgrade to Level 3</p>
+        <p style="color:var(--muted);font-size:11px;margin-bottom:8px">Complete every milestone: <strong style="color:${canL3?'var(--green)':'var(--red)'}">${ms.done} / ${ms.total}</strong></p>
+        <button onclick="cityUpgradeRI3()" style="width:auto;padding:5px 14px;margin:0;font-size:11px;${canL3?'border-color:var(--score);color:var(--score)':'opacity:.4;cursor:not-allowed'}">[ UPGRADE TO LEVEL 3 ]</button>
       </div>`;
     }
-
-    // Skill tree
-    html+=`<p style="color:var(--gp);font-size:10px;letter-spacing:2px;margin-bottom:14px">${fmt(state.genePoints)} 🧪 available</p>`;
+    html+=`<p style="color:var(--gp);font-size:10px;letter-spacing:1px;margin-bottom:12px">${fmt(state.genePoints)} 🧪 available</p>`;
     html+=`<div class="im-skill-tree" style="grid-template-columns:repeat(5,1fr)">`;
     RI_BRANCHES.forEach(branch=>{
-      html+=`<div class="im-branch">
-        <div class="im-branch-title" style="color:${branch.color}">${branch.name}</div>`;
+      html+=`<div class="im-branch"><div class="im-branch-title" style="color:${branch.color}">${branch.name}</div>`;
       branch.skills.forEach((skill,idx)=>{
         const owned=(city.riSkills||[]).includes(skill.id);
         const prevOwned=idx===0||(city.riSkills||[]).includes(branch.skills[idx-1].id);
@@ -2359,14 +2358,14 @@ function renderCity(){
         const isLocked=!owned&&(!prevOwned||levelLocked);
         const canBuy=!owned&&prevOwned&&!levelLocked&&state.genePoints>=skill.cost;
         const nodeCls=owned?'sk-owned':levelLocked?'sk-blocked':isLocked?'sk-locked':'sk-available';
-        if(idx>0) html+=`<div class="im-connector ${owned?'conn-lit':''}" style="color:${owned?branch.color:'var(--border)'};text-align:center;font-size:9px">↓</div>`;
+        if(idx>0)html+=`<div class="im-connector ${owned?'conn-lit':''}" style="color:${owned?branch.color:'var(--border)'};text-align:center;font-size:9px">↓</div>`;
         html+=`<div class="im-skill-node ${nodeCls}" style="${owned?`border-color:${branch.color};background:#0a0505`:''}" ${!owned&&!isLocked?`onclick="buyRISkill('${skill.id}')" title="${skill.effect}"`:''}>
           <div class="im-sn-name" style="${owned?`color:${branch.color}`:''}"> ${skill.name}</div>
           <div class="im-sn-effect">${skill.effect}</div>`;
-        if(owned) html+=`<div class="im-sn-cost owned" style="color:${branch.color}">✓ ACTIVE</div>`;
-        else if(levelLocked) html+=`<div class="im-sn-cost blocked">🔒 RI Level ${skill.riLevel}</div>`;
-        else if(isLocked) html+=`<div class="im-sn-cost locked">🔒 Prev tier</div>`;
-        else html+=`<div class="im-sn-cost ${canBuy?'afford':'noafford'}">${skill.cost} 🧪</div>`;
+        if(owned)html+=`<div class="im-sn-cost owned" style="color:${branch.color}">✓</div>`;
+        else if(levelLocked)html+=`<div class="im-sn-cost blocked">🔒 RI Lv${skill.riLevel}</div>`;
+        else if(isLocked)html+=`<div class="im-sn-cost locked">🔒</div>`;
+        else html+=`<div class="im-sn-cost ${canBuy?'afford':'noafford'}">${skill.cost}🧪</div>`;
         html+=`</div>`;
       });
       html+=`</div>`;
@@ -2375,10 +2374,10 @@ function renderCity(){
   }
 
   // Monument icon picker
-  if((city.slots||[]).includes('monument')){
+  if(vals.includes('monument')){
     const maxM=3+cb.monumentIconBonus;
-    html+=`<div style="margin-top:28px"><p style="color:var(--diamond);font-size:10px;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--dimblu)">// MONUMENT — CHOOSE ICONS (${(city.monumentIcons||[]).length}/${maxM})</p>`;
-    html+=`<div class="vault-icon-grid">`;
+    html+=`<div style="margin-top:20px"><p style="color:#818cf8;font-size:10px;letter-spacing:3px;margin-bottom:8px">// MONUMENT ICONS (${(city.monumentIcons||[]).length}/${maxM})</p>
+    <div class="vault-icon-grid">`;
     [...new Set(state.ownedIcons||[])].forEach(icon=>{
       const sel=(city.monumentIcons||[]).includes(icon);
       html+=`<div class="vault-icon-cell ${sel?'selected':''}" onclick="toggleMonumentIcon('${icon}')">${icon}</div>`;
@@ -2386,41 +2385,39 @@ function renderCity(){
     html+=`</div></div>`;
   }
 
-  // Breeding Hall status
-  if((city.slots||[]).includes('breeding')){
-    html+=`<div style="margin-top:28px"><p style="color:var(--gold);font-size:10px;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #2a1a00">// BREEDING HALL</p>`;
-    CITY_BUILDINGS.breeding.levels.forEach((lvl,i)=>{
-      const active=bhLevel>i;const current=bhLevel===i+1;
-      html+=`<div style="border:1px solid ${active?'var(--dimgreen)':current?'var(--gold)':'var(--border)'};background:${active?'#060e06':'var(--surface)'};padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
-        <div><div style="color:${active?'var(--green)':current?'var(--gold)':'var(--text)'};font-size:12px">${lvl.label}</div><div style="color:var(--muted);font-size:10px">${lvl.desc}</div></div>
-        <div style="color:${active?'var(--green)':'var(--muted)'};font-size:11px">${active?'✓ ACTIVE':fmt(lvl.target)+' breeds needed'}</div>
-      </div>`;
-    });
-    if(bhRate>0)html+=`<p style="color:var(--gold);font-size:11px;margin-top:8px">Current rate: ${fmt(bhRate)} gold/hour</p>`;
-    html+=`</div>`;
-  }
-
-  if((city.slots||[]).includes('culling')){
-    const chLevel=getCullingHallLevel();const chRate=getCullingHallRate();
-    html+=`<div style="margin-top:28px"><p style="color:var(--diamond);font-size:10px;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--dimblu)">// CULLING HALL</p>`;
-    CITY_BUILDINGS.culling.levels.forEach((lvl,i)=>{
-      const active=chLevel>i;
-      html+=`<div style="border:1px solid ${active?'var(--dimblu)':'var(--border)'};background:${active?'#00090f':'var(--surface)'};padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
-        <div><div style="color:${active?'var(--diamond)':'var(--text)'};font-size:12px">${lvl.label}</div><div style="color:var(--muted);font-size:10px">${lvl.desc}</div></div>
-        <div style="color:${active?'var(--diamond)':'var(--muted)'};font-size:11px">${active?'✓ ACTIVE':fmt(lvl.target)+' culls needed'}</div>
-      </div>`;
-    });
-    if(chRate>0)html+=`<p style="color:var(--diamond);font-size:11px;margin-top:8px">Current rate: ${fmt(chRate)} 💎/hour</p>`;
+  // Breeding/Culling hall info
+  if(vals.includes('breeding')||vals.includes('culling')){
+    html+=`<div style="margin-top:20px;display:flex;gap:20px;flex-wrap:wrap">`;
+    if(vals.includes('breeding')){
+      html+=`<div style="flex:1;min-width:200px"><p style="color:var(--gold);font-size:10px;letter-spacing:2px;margin-bottom:6px">🏗️ BREEDING HALL</p>`;
+      CITY_BUILDINGS.breeding.levels.forEach((lvl,i)=>{const a=bhLevel>i;html+=`<div style="font-size:10px;color:${a?'var(--green)':'var(--muted)'};margin-bottom:3px">${a?'✓':' '} ${lvl.label} — ${lvl.desc}</div>`;});
+      if(bhRate)html+=`<p style="color:var(--gold);font-size:11px;margin-top:6px">Current: ${fmt(bhRate)} gold/hr</p>`;
+      html+=`</div>`;
+    }
+    if(vals.includes('culling')){
+      const chRate=getCullingHallRate();const chLevel=getCullingHallLevel();
+      html+=`<div style="flex:1;min-width:200px"><p style="color:var(--diamond);font-size:10px;letter-spacing:2px;margin-bottom:6px">⚗️ CULLING HALL</p>`;
+      CITY_BUILDINGS.culling.levels.forEach((lvl,i)=>{const a=chLevel>i;html+=`<div style="font-size:10px;color:${a?'var(--diamond)':'var(--muted)'};margin-bottom:3px">${a?'✓':' '} ${lvl.label} — ${lvl.desc}</div>`;});
+      if(chRate)html+=`<p style="color:var(--diamond);font-size:11px;margin-top:6px">Current: ${fmt(chRate)} 💎/hr</p>`;
+      html+=`</div>`;
+    }
     html+=`</div>`;
   }
 
   c.innerHTML=html;
+  // Re-open tile editor if one was open
+  if(window._openTileKey){
+    const ed=c.querySelector('#city-tile-editor');
+    if(ed)ed.classList.remove('hidden');
+    window.openCityTile(window._openTileKey);
+  }
   }catch(err){
-    console.error('renderCity error:',err);
-    c.innerHTML=`<div style="color:var(--red);font-size:12px;padding:20px;border-left:2px solid var(--red)">City failed to render: ${err.message}<br><br><button onclick="renderCity()" style="width:auto;font-size:11px;padding:4px 12px;margin:0">[ RETRY ]</button></div>`;
+    console.error('renderCity:',err);
+    c.innerHTML=`<div style="color:var(--red);padding:20px;border-left:2px solid var(--red)">City error: ${err.message}<br><br><button onclick="renderCity()" style="width:auto;padding:4px 12px;margin:0;font-size:11px">[ RETRY ]</button></div>`;
   }
 }
 window.renderCity=renderCity;
+
 
 window.renderLeaderboard=(entries,currentUid)=>{
   const c=document.getElementById('leaderboard-container');if(!c)return;
