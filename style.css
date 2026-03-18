@@ -400,9 +400,9 @@ h2:first-child { margin-top:0; }
 
 .h/* ── CITY ───────────────────────────────────────────── */
 .city-emoji-grid {
-  display:flex;
-  flex-wrap:wrap;
+  display:grid;
   gap:4px; margin-bottom:16px;
+  overflow-x:auto;
 }
 .city-tile {
   border:1px solid var(--border); background:var(--surface);
