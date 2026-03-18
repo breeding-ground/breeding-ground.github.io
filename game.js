@@ -2281,7 +2281,7 @@ function renderCity(){
     genespire:{emoji:'🧬',color:'var(--gp)',    label:'Spire'},
   };
 
-  html+=`<div class="city-emoji-grid" style="grid-template-columns:repeat(${gMaxX-gMinX+1},72px)">`;
+  html+=`<div class="city-emoji-grid" style="display:grid;grid-template-columns:repeat(${gMaxX-gMinX+1},72px);gap:4px;margin-bottom:16px;overflow-x:auto">`;
   for(let y=gMinY;y<=gMaxY;y++){
     for(let x=gMinX;x<=gMaxX;x++){
       const key=`${x},${y}`;
