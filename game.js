@@ -679,6 +679,7 @@ function defaultState(){
 function getMaxPop(){return POP_CAP_TABLE[safeNum(state.upgrades?.popCap)]??20;}
 
 function getCityBonuses(){
+  if(!state||!state.city)return{cullGoldMult:1,breedGoldMult:1,researchDiaMult:1,vaultCostMult:1,breedingHallMult:1,allGoldMult:1,allDiaMult:1,traitCapBonus:0,immortalHpBonus:0,immortalAtkBonus:0,immortalDefBonus:0,immortalStatMult:1,pvpGpBonus:0,milestoneGpBonus:0,secretMsGpBonus:0,perHundredGpBonus:0,vaultDupRefundBonus:0,autoBreederSpeedMult:1,prestigeSkillCostMult:1,prestigeCostMult:1,allGpMult:1,scoreGenBonus:0,monumentIconBonus:0,allMsGpMult:1,researchRateMult:1,bannerUnlocked:false,mottoUnlocked:false};
   const sk=state.city?.riSkills||[];
   const b={
     cullGoldMult:1,breedGoldMult:1,researchDiaMult:1,vaultCostMult:1,
@@ -2219,6 +2220,13 @@ window.openCityTile=(idx)=>{
 
 function renderCity(){
   const c=document.getElementById('city-container');if(!c)return;
+  // Ensure city object exists (guard against old saves)
+  if(!state.city||typeof state.city!=='object'){
+    state.city={name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,
+      slots:[null,null,null,null,null,null,null,null],monumentIcons:[],lastGoldTick:null,goldBuffer:0,spireTiers:{}};
+  }
+  if(!state.city.spireTiers)state.city.spireTiers={};
+  try{
   const act2Done=(state.pveAct2Completed||[]).length>=PVE_ACT2_STAGES.length;
   if(!act2Done){
     c.innerHTML=`<div class="combat-locked" style="border-color:var(--score)">
@@ -2234,12 +2242,15 @@ function renderCity(){
   const city=state.city;
   const bhLevel=getBreedingHallLevel();
   const bhRate=getBreedingHallRate();
+  // Declare counts early — avoids temporal dead zone if referenced in template literals
+  const bhCount=(city.slots||[]).filter(s=>s==='breeding').length;
+  const chCount=(city.slots||[]).filter(s=>s==='culling').length;
+  const spireCount=(city.slots||[]).filter(s=>s==='genespire').length;
+  const totalSpireGpH=getTotalSpireGpH();
 
   let html='';
   // Header
   const banner=city.bannerColor||'var(--score)';
-  const bhCount=(city.slots||[]).filter(s=>s==='breeding').length;
-  const chCount=(city.slots||[]).filter(s=>s==='culling').length;
   html+=`<div style="border-left:4px solid ${banner};padding-left:16px;margin-bottom:20px">
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
       <span style="color:${banner};font-size:20px;letter-spacing:2px">${city.name||'Unnamed City'}</span>
@@ -2272,8 +2283,6 @@ function renderCity(){
 
   // ── EMOJI CITY GRID ──────────────────────────────────────
   // Building config: emoji, colour, tooltip line
-  const spireCount=(city.slots||[]).filter(s=>s==='genespire').length;
-  const totalSpireGpH=getTotalSpireGpH();
   const BLDG_DISPLAY={
     research: {emoji:'🏛️', color:'var(--score)',  label:'Institute',  tip:`RI Lv${city.riLevel} · ${(city.riSkills||[]).length}/40 skills`},
     breeding: {emoji:'🏗️', color:'var(--gold)',   label:'Breeding',   tip:`${bhLevel?fmt(bhRate)+'g/hr':'Inactive'}`},
@@ -2406,6 +2415,10 @@ function renderCity(){
   }
 
   c.innerHTML=html;
+  }catch(err){
+    console.error('renderCity error:',err);
+    c.innerHTML=`<div style="color:var(--red);font-size:12px;padding:20px;border-left:2px solid var(--red)">City failed to render: ${err.message}<br><br><button onclick="renderCity()" style="width:auto;font-size:11px;padding:4px 12px;margin:0">[ RETRY ]</button></div>`;
+  }
 }
 window.renderCity=renderCity;
 
