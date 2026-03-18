@@ -142,8 +142,9 @@ const GENE_VAULTS=[
 // Boss icons (PvE exclusive — 4 total)
 const PVE_BOSS_ICONS=['🩸','👁️','💀','🌑'];
 const PVE_ACT2_BOSS_ICONS=['🌋','🏔️','👾','🎆'];
+const PVE_ACT3_BOSS_ICONS=['🔴','⬛','🔱','♾️'];
 const TOTAL_VAULT_ICONS=150;
-const TOTAL_ICONS=TOTAL_VAULT_ICONS+PVE_BOSS_ICONS.length+PVE_ACT2_BOSS_ICONS.length; // 158
+const TOTAL_ICONS=TOTAL_VAULT_ICONS+PVE_BOSS_ICONS.length+PVE_ACT2_BOSS_ICONS.length+PVE_ACT3_BOSS_ICONS.length; // 162
 
 let vaultPreviewId=null;
 
@@ -341,14 +342,27 @@ RI_BRANCHES.forEach(b=>b.skills.forEach(s=>{RI_SKILL_MAP[s.id]={...s,branch:b.id
 
 // Building types available for city slots (slot 0 = research always)
 const CITY_BUILDINGS={
-  breeding:{id:'breeding',name:'Breeding Hall',icon:'🏗️',desc:'Produces gold passively based on total breeds.',
+  breeding:{id:'breeding',name:'Breeding Hall',icon:'🏗️',
+    shortDesc:'Generates gold passively. Rate scales with total breeds. Works offline (capped at 24h).',
+    desc:'Produces gold passively based on total breeds.',
     levels:[
       {target:10000, gpH:10000,  label:'10k breeds',  desc:'Produces 10,000 gold/hour'},
       {target:20000, gpH:20000,  label:'20k breeds',  desc:'Produces 20,000 gold/hour'},
       {target:30000, gpH:30000,  label:'30k breeds',  desc:'Produces 30,000 gold/hour'},
       {target:50000, gpH:50000,  label:'50k breeds',  desc:'Produces 50,000 gold/hour'},
     ]},
-  monument:{id:'monument',name:'Monument',icon:'🗿',desc:'Display your icon collection for visiting players.',},
+  culling:{id:'culling',name:'Culling Hall',icon:'⚗️',
+    shortDesc:'Generates diamonds passively. Rate scales with total culls. Works offline (capped at 24h).',
+    desc:'Produces diamonds passively based on total creatures culled.',
+    levels:[
+      {target:1000,  diaH:1000,  label:'1k culled',   desc:'Produces 1,000 💎/hour'},
+      {target:2500,  diaH:2500,  label:'2.5k culled',  desc:'Produces 2,500 💎/hour'},
+      {target:5000,  diaH:5000,  label:'5k culled',   desc:'Produces 5,000 💎/hour'},
+      {target:10000, diaH:10000, label:'10k culled',  desc:'Produces 10,000 💎/hour'},
+    ]},
+  monument:{id:'monument',name:'Monument',icon:'🗿',
+    shortDesc:'Display your collected icons. Other players see these when they visit your city.',
+    desc:'Display your icon collection for visiting players.',},
 };
 function getBreedingHallLevel(){
   const bred=safeNum(state.totalBred);
@@ -362,6 +376,19 @@ function getBreedingHallRate(){
   if(!lvl)return 0;
   const b=getCityBonuses();
   return CITY_BUILDINGS.breeding.levels[lvl-1].gpH*b.breedingHallMult*b.allGoldMult;
+}
+function getCullingHallLevel(){
+  const culled=safeNum(state.totalCulled);
+  const lvls=CITY_BUILDINGS.culling.levels;
+  let level=0;
+  for(let i=0;i<lvls.length;i++){if(culled>=lvls[i].target)level=i+1;}
+  return level;
+}
+function getCullingHallRate(){
+  const lvl=getCullingHallLevel();
+  if(!lvl)return 0;
+  const b=getCityBonuses();
+  return CITY_BUILDINGS.culling.levels[lvl-1].diaH*b.allDiaMult;
 }
 const PVE_ACT2_STAGES=[
   // Act 2 — The Ascendancy (stages 1-9, needs 1-2 fully skilled immortals or 1 prestiged)
@@ -401,6 +428,63 @@ const PVE_ACT2_STAGES=[
   {id:'a2_31',act:2,name:'Omega Armada',           desc:'Four Omega Prime creatures. All stats maximised. Regen 90+.',           enemies:4,eLevel:28,gpR:30, iconR:null,       boss:false},
   {id:'a2_32',act:2,name:'The Transcendent Six',   desc:'Six fully transcendent soldiers. The last challenge before the end.',   enemies:6,eLevel:26,gpR:35, iconR:null,       boss:false},
   {id:'a2_33',act:2,name:'🎆 BOSS: The Absolute',  desc:'The final reckoning. Never defeated. Three fully prestiged immortals required.', enemies:2,eLevel:33,gpR:100,iconR:'🎆',boss:true},
+];
+
+// ═══════════════════════════════════════════════════════════
+//  PvE ACT 3 — 27 stages
+//  Requires all 33 Act 2 stages cleared.
+//  Balanced: requires 3 fully maxed + fully prestiged immortals.
+//  Enemies scale far beyond prestige stats alone — city RI warfare bonuses become essential.
+//  Enemy formula: ATK=800+level*60, DEF=600+level*50, HP=3000+level*300
+//  All enemies: crit 35%, dodge 25%, regen 80+level*8/rnd
+// ═══════════════════════════════════════════════════════════
+function makePveAct3Enemy(level,idx=0){
+  const names=['Void God','Eternal Prime','Omega Absolute','Transcendent','The Undying','Apex Eternal','Sovereign Prime','Infinite','The Final','The Absolute'];
+  const jitter=rand(-15,15);
+  return{
+    atk:  Math.max(200, 800+level*60+jitter),
+    spd:  Math.max(100, 600+level*45+Math.floor(jitter/2)-idx*8),
+    def:  Math.max(200, 600+level*50+jitter),
+    hp:   3000+level*300,
+    crit:  0.35,
+    dodge: 0.25,
+    regen: 80+level*8,
+    name:`${names[(idx+level)%names.length]} ${String.fromCharCode(65+idx)}`,
+  };
+}
+
+const PVE_ACT3_STAGES=[
+  // Chapter 1 — The Infinite War (1-8, needs 3 fully maxed+prestiged, city RI warfare helps)
+  {id:'a3_1', act:3,name:'Beyond The Veil',          desc:'The first enemy of Act 3 has stats beyond what you thought possible.',    enemies:1,eLevel:2, gpR:10, iconR:null,      boss:false},
+  {id:'a3_2', act:3,name:'The Dual Nightmare',        desc:'Two enemies, each more powerful than The Absolute. Coordinate precisely.',enemies:2,eLevel:2, gpR:12, iconR:null,      boss:false},
+  {id:'a3_3', act:3,name:'Triad of Infinity',         desc:'Three absolute-tier opponents. Every stat matters here.',                  enemies:3,eLevel:3, gpR:14, iconR:null,      boss:false},
+  {id:'a3_4', act:3,name:'The Immovable',             desc:'One supremely armoured opponent. Burst damage or nothing.',               enemies:1,eLevel:5, gpR:14, iconR:null,      boss:false},
+  {id:'a3_5', act:3,name:'Infinite Legion',           desc:'Six enemies simultaneously. The regen alone may outlast you.',           enemies:6,eLevel:3, gpR:15, iconR:null,      boss:false},
+  {id:'a3_6', act:3,name:'The Speed Gods',            desc:'Two enemies of incomprehensible speed. They attack first, always.',       enemies:2,eLevel:5, gpR:16, iconR:null,      boss:false},
+  {id:'a3_7', act:3,name:'Omega Tribunal',            desc:'Three ancient judges empowered beyond their Act 2 forms.',               enemies:3,eLevel:5, gpR:18, iconR:null,      boss:false},
+  {id:'a3_8', act:3,name:'🔴 BOSS: The Crimson God',  desc:'A god of war. Three fully maxed prestiged fighters required.',           enemies:1,eLevel:8, gpR:30, iconR:'🔴',      boss:true},
+  // Chapter 2 — The Dark Convergence (9-16, city RI warfare bonuses required)
+  {id:'a3_9', act:3,name:'Dark Vanguard',             desc:'Two Dark Convergence soldiers. Your RI warfare tree must be invested.',   enemies:2,eLevel:8, gpR:18, iconR:null,      boss:false},
+  {id:'a3_10',act:3,name:'The Unholy Trinity',        desc:'Three enemies with perfect tactical synergy. No weak links.',            enemies:3,eLevel:9, gpR:20, iconR:null,      boss:false},
+  {id:'a3_11',act:3,name:'Crushing Tide',             desc:'Five enemies in a relentless assault. Regen will be your downfall.',     enemies:5,eLevel:8, gpR:20, iconR:null,      boss:false},
+  {id:'a3_12',act:3,name:'The Apex Duel',             desc:'Two apex-eternal specimens. The hardest two-enemy fight in the game.',   enemies:2,eLevel:11,gpR:22, iconR:null,      boss:false},
+  {id:'a3_13',act:3,name:'Void Armada',               desc:'Four void-class enemies with maximum regen. Attrition warfare.',        enemies:4,eLevel:10,gpR:22, iconR:null,      boss:false},
+  {id:'a3_14',act:3,name:'The Seven',                 desc:'Seven enemies. An overwhelming wall of regenerating power.',            enemies:7,eLevel:8, gpR:24, iconR:null,      boss:false},
+  {id:'a3_15',act:3,name:'Immortal Champions',        desc:'Two immortal-class champions who share their HP pools tactically.',      enemies:2,eLevel:13,gpR:25, iconR:null,      boss:false},
+  {id:'a3_16',act:3,name:'⬛ BOSS: The Void Empress', desc:'She has never lost. Darkness incarnate. Your RI bonuses determine survival.', enemies:1,eLevel:15,gpR:40, iconR:'⬛', boss:true},
+  // Chapter 3 — The Final Ascent (17-23, maximum challenge)
+  {id:'a3_17',act:3,name:'Ascent Begins',             desc:'Three enemies at levels that should not exist.',                         enemies:3,eLevel:15,gpR:25, iconR:null,      boss:false},
+  {id:'a3_18',act:3,name:'Eternal Vanguard',          desc:'Two eternal-class vanguards at absolute maximum stats.',                 enemies:2,eLevel:18,gpR:28, iconR:null,      boss:false},
+  {id:'a3_19',act:3,name:'The Impossible Six',        desc:'Six enemies at the highest regular difficulty.',                        enemies:6,eLevel:15,gpR:28, iconR:null,      boss:false},
+  {id:'a3_20',act:3,name:'Omega Singularity',         desc:'One opponent whose stats defy conventional categorisation.',            enemies:1,eLevel:22,gpR:30, iconR:null,      boss:false},
+  {id:'a3_21',act:3,name:'The Four Horsemen',         desc:'Four supreme champions. Each one could solo Act 2.',                    enemies:4,eLevel:19,gpR:32, iconR:null,      boss:false},
+  {id:'a3_22',act:3,name:'Dark Convergence Final',    desc:'Five enemies representing the pinnacle of dark genetic engineering.',   enemies:5,eLevel:18,gpR:35, iconR:null,      boss:false},
+  {id:'a3_23',act:3,name:'🔱 BOSS: The Trinity',      desc:'Three absolute beings fighting as one. Your strongest fight yet.',      enemies:3,eLevel:20,gpR:50, iconR:'🔱',      boss:true},
+  // Chapter 4 — The End (24-27)
+  {id:'a3_24',act:3,name:'The Penultimate',           desc:'Four enemies. Every single RI skill matters now.',                      enemies:4,eLevel:22,gpR:40, iconR:null,      boss:false},
+  {id:'a3_25',act:3,name:'Final Gauntlet',            desc:'Seven enemies at maximum power. Survive to claim your place.',         enemies:7,eLevel:20,gpR:45, iconR:null,      boss:false},
+  {id:'a3_26',act:3,name:'The Last Trial',            desc:'Two beings of infinite power. The final preparation.',                 enemies:2,eLevel:28,gpR:50, iconR:null,      boss:false},
+  {id:'a3_27',act:3,name:'♾️ BOSS: The Infinite',    desc:'Beyond all limits. Beyond all understanding. Three fully invested RI warfare immortals required.', enemies:1,eLevel:35,gpR:200, iconR:'♾️', boss:true},
 ];
 
 // Enemy formula for Act 1 (unchanged)
@@ -486,13 +570,15 @@ const MILESTONE_TRACKS=[
   {id:'research',name:'RESEARCH',val:s=>safeNum(s.research?.labInterns)+safeNum(s.research?.geneAnalysts)+safeNum(s.research?.lineageArchivists)+(s.research?.headOfResearch?1:0)+(s.research?.automatedSequencer?1:0),unit:'researchers',
    tiers:[{id:'m_first_researcher',name:'Research Initiative',target:1,gp:1},{id:'mt_res_3',name:'Growing Team',target:3,gp:1},{id:'mt_res_8',name:'Division',target:8,gp:2},{id:'mt_res_15',name:'Department',target:15,gp:2},{id:'mt_res_25',name:'Full Lab',target:25,gp:3},{id:'mt_res_37',name:'Complete Division',target:37,gp:4}]},
   {id:'icons',name:'ICON COLLECTION',val:s=>(s.ownedIcons||[]).length,unit:'icons',
-   tiers:[{id:'mt_icon_1',name:'First Find',target:1,gp:0},{id:'mt_icon_5',name:'Growing Set',target:5,gp:1},{id:'mt_icon_15',name:'Collector',target:15,gp:1},{id:'mt_icon_30',name:'Curator',target:30,gp:2},{id:'mt_icon_50',name:'Archivist',target:50,gp:2},{id:'mt_icon_80',name:'Master Collector',target:80,gp:3},{id:'mt_icon_158',name:'Complete Set',target:158,gp:5}]},
+   tiers:[{id:'mt_icon_1',name:'First Find',target:1,gp:0},{id:'mt_icon_5',name:'Growing Set',target:5,gp:1},{id:'mt_icon_15',name:'Collector',target:15,gp:1},{id:'mt_icon_30',name:'Curator',target:30,gp:2},{id:'mt_icon_50',name:'Archivist',target:50,gp:2},{id:'mt_icon_80',name:'Master Collector',target:80,gp:3},{id:'mt_icon_162',name:'Complete Set',target:162,gp:5}]},
   {id:'immortals',name:'IMMORTALS',val:s=>(s.immortals||[]).length,unit:'immortals',
    tiers:[{id:'mt_imm_1',name:'First Champion',target:1,gp:2},{id:'mt_imm_3',name:'Elite Guard',target:3,gp:3},{id:'mt_imm_5',name:'Immortal Legion',target:5,gp:4}]},
   {id:'pve',name:'PVE ACT 1',val:s=>(s.pveCompleted||[]).length,unit:'stages cleared',
    tiers:[{id:'mt_pve_1',name:'First Blood',target:1,gp:2},{id:'mt_pve_5',name:'Veteran Fighter',target:5,gp:3},{id:'mt_pve_10',name:'Act 1 Complete',target:10,gp:4},{id:'mt_pve_20',name:'Act 2 Complete',target:20,gp:5},{id:'mt_pve_30',name:'Act 3 Complete',target:30,gp:6},{id:'mt_pve_37',name:'Conqueror',target:37,gp:10}]},
   {id:'pve2',name:'PVE ACT 2',val:s=>(s.pveAct2Completed||[]).length,unit:'act 2 stages',
    tiers:[{id:'mt_pve2_1',name:'Ascendant',target:1,gp:3},{id:'mt_pve2_10',name:'First Reckoning',target:10,gp:5},{id:'mt_pve2_20',name:'Transcendent',target:20,gp:8},{id:'mt_pve2_33',name:'The Absolute',target:33,gp:15}]},
+  {id:'pve3',name:'PVE ACT 3',val:s=>(s.pveAct3Completed||[]).length,unit:'act 3 stages',
+   tiers:[{id:'mt_pve3_1',name:'Beyond The Veil',target:1,gp:5},{id:'mt_pve3_8',name:'Crimson God Slain',target:8,gp:8},{id:'mt_pve3_16',name:'Void Empress Fallen',target:16,gp:12},{id:'mt_pve3_23',name:'Trinity Defeated',target:23,gp:20},{id:'mt_pve3_27',name:'The Infinite',target:27,gp:50}]},
   {id:'city_ri',name:'RESEARCH INSTITUTE',val:s=>safeNum(s.city?.riLevel),unit:'RI level',
    tiers:[{id:'mt_ri_1',name:'The Institute Opens',target:1,gp:5},{id:'mt_ri_2',name:'Sacrifice Made',target:2,gp:15},{id:'mt_ri_3',name:'Absolute Dominion',target:3,gp:50}]},
   {id:'city_skills',name:'RI SKILLS',val:s=>(s.city?.riSkills||[]).length,unit:'skills unlocked',
@@ -558,8 +644,9 @@ function defaultState(){
     totalVaultOpens:0,ownedIcons:[],selectedIcon:null,
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
     vault_predator_opens:0,vault_ancient_opens:0,vault_machine_opens:0,
-    immortals:[],combatSlots:1,pveCompleted:[],pveAct2Completed:[],pvpWins:0,pvpLosses:0,combatLog:[],
+    immortals:[],combatSlots:1,pveCompleted:[],pveAct2Completed:[],pveAct3Completed:[],pvpWins:0,pvpLosses:0,combatLog:[],
     city:{name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,slots:[null,null,null,null,null,null,null,null],monumentIcons:[],lastGoldTick:null,goldBuffer:0},
+    loginStreak:0,lastLoginDate:null,totalLoginDays:0,loginRewardsClaimed:[],
     research:{labInterns:0,geneAnalysts:0,lineageArchivists:0,headOfResearch:false,automatedSequencer:false},
     upgrades:{popCap:0,mutation:0,traitAmp:0,breedYield:0,cullValue:0,selective:0,cullInsight:0,lineageMem:0,hybridVigor:0,adaptiveGenetics:0,autoBreeder:0,traitCapBoost:0,eliteMutation:0,deepArchive:0,secretDecoder:0},
   };
@@ -703,7 +790,10 @@ function sanitiseState(s){
     combatSlots:Math.max(1,safeNum(s.combatSlots,1)),
     pveCompleted:Array.isArray(s.pveCompleted)?s.pveCompleted:[],
     pveAct2Completed:Array.isArray(s.pveAct2Completed)?s.pveAct2Completed:[],
+    pveAct3Completed:Array.isArray(s.pveAct3Completed)?s.pveAct3Completed:[],
     pvpWins:safeNum(s.pvpWins),pvpLosses:safeNum(s.pvpLosses),
+    loginStreak:safeNum(s.loginStreak),lastLoginDate:s.lastLoginDate||null,
+    totalLoginDays:safeNum(s.totalLoginDays),loginRewardsClaimed:Array.isArray(s.loginRewardsClaimed)?s.loginRewardsClaimed:[],
     combatLog:Array.isArray(s.combatLog)?s.combatLog:[],
     city:{
       name:s.city?.name||'',bannerColor:s.city?.bannerColor||'',motto:s.city?.motto||'',
@@ -776,6 +866,7 @@ window.applySaveData=(data)=>{
   _gameReady=true;
   selectedForBreeding=[];rebuildBestEverTraits();migrateLegacyProgress();checkMilestones();
   tickCityGold();
+  checkLoginReward();
   startAutoBreeder();renderAll();
 };
 window.initNewGame=()=>{
@@ -861,10 +952,11 @@ function _doBreed(pA,pB,targeted=false,silent=false){
   if(state.population.length>safeNum(state.maxPopEver))state.maxPopEver=state.population.length;
   const ry=researchBreedYield();if(ry>0){state.diamondBuffer=safeNum(state.diamondBuffer)+ry;flushDiamondBuffer();}
   tickArchivists();checkEverBroke();
-  // 1 GP (+city bonus) every 100 generations
+  // 1-2 GP (+city bonus) every 100 generations
   if(state.generation%100===0){
     const cb=getCityBonuses();
-    const gp=Math.floor((1+cb.perHundredGpBonus)*cb.allGpMult);
+    const base=rand(1,2);
+    const gp=Math.floor((base+cb.perHundredGpBonus)*cb.allGpMult);
     state.genePoints+=gp;
     addLog(`🧪 Generation ${fmt(state.generation)} — +${gp} Gene Point${gp!==1?'s':''}`,'gp');
   }
@@ -1108,6 +1200,34 @@ window.runAct2Stage=(stageId,immortalIds)=>{
   checkMilestones();renderAll();
 };
 
+window.runAct3Stage=(stageId,immortalIds)=>{
+  const stage=PVE_ACT3_STAGES.find(s=>s.id===stageId);if(!stage)return;
+  if((state.pveAct2Completed||[]).length<PVE_ACT2_STAGES.length)return addLog('Complete all of Act 2 first.','warn');
+  if((state.pveAct3Completed||[]).includes(stageId))return addLog('Already cleared.','warn');
+  const idx=PVE_ACT3_STAGES.findIndex(s=>s.id===stageId);
+  if(idx>0&&!(state.pveAct3Completed||[]).includes(PVE_ACT3_STAGES[idx-1].id))return addLog('Complete previous stage first.','warn');
+  const ids=Array.isArray(immortalIds)?immortalIds:[immortalIds];
+  const seen=new Set();const uniqueIds=[];
+  for(const id of ids){if(id&&!seen.has(id)){seen.add(id);uniqueIds.push(id);}}
+  if(ids.filter(Boolean).length!==uniqueIds.length)return addLog('You cannot use the same immortal in multiple slots.','warn');
+  const ims=uniqueIds.filter(Boolean).map(id=>(state.immortals||[]).find(x=>x.id===id)).filter(Boolean);
+  if(!ims.length)return addLog('No valid immortals selected.','warn');
+  const atkDefs=ims.map(im=>({...getImmortalStats(im),name:im.name}));
+  const defDefs=Array.from({length:stage.enemies},(_,i)=>makePveAct3Enemy(stage.eLevel,i));
+  const result=simulateFight(atkDefs,defDefs);
+  state.combatLog=[{type:'pve3',stageName:stage.name,won:result.won,log:result.log,time:ts()},...(state.combatLog||[]).slice(0,19)];
+  if(result.won){
+    state.pveAct3Completed=[...(state.pveAct3Completed||[]),stageId];
+    state.genePoints+=stage.gpR;
+    if(stage.iconR&&!(state.ownedIcons||[]).includes(stage.iconR))
+      state.ownedIcons=[...(state.ownedIcons||[]),stage.iconR];
+    addLog(`⚡ ACT 3: "${stage.name}" cleared! +${stage.gpR}🧪`+(stage.iconR?` + icon ${stage.iconR}`:''),'gp');
+  } else {
+    addLog(`💀 ACT 3: "${stage.name}" failed. Invest in RI Warfare skills and prestige fully.`,'warn');
+  }
+  checkMilestones();renderAll();
+};
+
 // VAULT
 window.toggleVaultPreview=(id)=>{vaultPreviewId=vaultPreviewId===id?null:id;renderGeneVault();};
 window.openVault=(id)=>{
@@ -1147,21 +1267,37 @@ window._pvpFight=(key)=>{
 // Tick gold from Breeding Hall (called on load + on save)
 function tickCityGold(){
   if(!isCityUnlocked())return;
-  const rate=getBreedingHallRate(); // gold per hour
-  if(!rate)return;
   const now=Date.now();
   const last=state.city.lastGoldTick?new Date(state.city.lastGoldTick).getTime():now;
-  const hoursElapsed=Math.min((now-last)/3600000, 24); // cap at 24h offline
-  if(hoursElapsed<0.01)return;
-  const earned=Math.floor(rate*hoursElapsed);
-  if(earned>0){
-    state.gold+=earned;state.totalGoldEarned+=earned;
-    addLog(`🏗️ Breeding Hall produced ${fmt(earned)} gold (${fmt1(hoursElapsed)}h).`,'highlight');
+  const hoursElapsed=Math.min((now-last)/3600000, 24);
+  if(hoursElapsed<0.01){state.city.lastGoldTick=new Date(now).toISOString();return;}
+  // Breeding Hall → gold
+  const bhRate=getBreedingHallRate();
+  if(bhRate>0){
+    const earned=Math.floor(bhRate*hoursElapsed);
+    if(earned>0){state.gold+=earned;state.totalGoldEarned+=earned;addLog(`🏗️ Breeding Hall: +${fmt(earned)} gold (${fmt1(hoursElapsed)}h).`,'highlight');}
+  }
+  // Culling Hall → diamonds
+  if((state.city.slots||[]).includes('culling')){
+    const chRate=getCullingHallRate();
+    if(chRate>0){
+      const earned=Math.floor(chRate*hoursElapsed);
+      if(earned>0){state.diamonds+=earned;state.totalDiamondsEarned+=earned;addLog(`⚗️ Culling Hall: +${fmt(earned)} 💎 (${fmt1(hoursElapsed)}h).`,'diamond');}
+    }
   }
   state.city.lastGoldTick=new Date(now).toISOString();
 }
 window.tickCityGold=tickCityGold;
 
+// Remove a building from a slot
+window.cityRemoveSlot=(slotIdx)=>{
+  if(slotIdx===0)return addLog('The Research Institute slot cannot be removed.','warn');
+  if(!state.city.slots[slotIdx])return;
+  const old=state.city.slots[slotIdx];
+  state.city.slots[slotIdx]=null;
+  addLog(`🏙️ Removed ${CITY_BUILDINGS[old]?.name||old} from slot ${slotIdx+1}.`,'highlight');
+  renderCity();
+};
 // Build a slot
 window.citySetSlot=(slotIdx,buildingId)=>{
   if(!isCityUnlocked())return;
@@ -1413,6 +1549,7 @@ function renderAll(){
   if(currentTab==='vault')renderGeneVault();
   if(currentTab==='combat')renderCombat();
   if(currentTab==='city')renderCity();
+  if(currentTab==='login')renderLogin();
 }
 
 function renderStats(){
@@ -1427,6 +1564,14 @@ function renderStats(){
   document.getElementById('stat-bred').textContent=fmt(state.totalBred);
   document.getElementById('stat-culled').textContent=fmt(state.totalCulled);
   updateAutoBtn();
+  // Streak widget
+  const streak=safeNum(state.loginStreak);
+  const sw=document.getElementById('streak-widget');
+  const sc=document.getElementById('streak-count');
+  if(sw&&sc){
+    sw.classList.toggle('hidden', streak===0);
+    sc.textContent=streak;
+  }
 }
 
 function renderUpgrades(){
@@ -1629,6 +1774,7 @@ function renderCombat(){
   let html=`<div class="combat-subtabs">
     <button class="combat-stab ${combatSubTab==='pve'?'active':''}" onclick="setCombatTab('pve')">ACT 1</button>
     <button class="combat-stab ${combatSubTab==='pve2'?'active':''}" onclick="setCombatTab('pve2')">ACT 2</button>
+    <button class="combat-stab ${combatSubTab==='pve3'?'active':''}" onclick="setCombatTab('pve3')">ACT 3</button>
     <button class="combat-stab ${combatSubTab==='pvp'?'active':''}" onclick="setCombatTab('pvp')">PVP</button>
   </div>`;
 
@@ -1749,8 +1895,61 @@ function renderCombat(){
       }
     }
 
+  } else if(combatSubTab==='pve3'){
+    const act2Done=(state.pveAct2Completed||[]).length>=PVE_ACT2_STAGES.length;
+    if(!act2Done){
+      html+=`<div class="combat-locked" style="border-color:#ff4444">
+        ⚡ ACT 3 — THE INFINITE WAR<br><br>
+        Complete all 33 stages of Act 2 to unlock Act 3.<br>
+        <span style="color:var(--muted);font-size:11px">Act 2 progress: ${(state.pveAct2Completed||[]).length} / ${PVE_ACT2_STAGES.length}</span>
+      </div>`;
+    } else {
+      const a3color='#ff4444';
+      html+=`<p class="pve-intro" style="border-color:${a3color};color:var(--muted)">ACT 3 — THE INFINITE WAR. 27 stages across 4 chapters. 4 boss icons. Requires 3 fully maxed, fully prestiged immortals with RI Warfare investment. Enemies have 35% crit, 25% dodge, and massive regen.</p>`;
+      const a3sections=[
+        {label:'CHAPTER 1 — THE INFINITE WAR (1-8)',min:0,max:7},
+        {label:'CHAPTER 2 — THE DARK CONVERGENCE (9-16)',min:8,max:15},
+        {label:'CHAPTER 3 — THE FINAL ASCENT (17-23)',min:16,max:22},
+        {label:'CHAPTER 4 — THE END (24-27)',min:23,max:26},
+      ];
+      a3sections.forEach(section=>{
+        const stages=PVE_ACT3_STAGES.slice(section.min,section.max+1);
+        html+=`<p class="act-title" style="color:${a3color}">${section.label}</p><div class="pve-grid">`;
+        stages.forEach(stage=>{
+          const gIdx=PVE_ACT3_STAGES.findIndex(s=>s.id===stage.id);
+          const done=(state.pveAct3Completed||[]).includes(stage.id);
+          const prevDone=gIdx===0||(state.pveAct3Completed||[]).includes(PVE_ACT3_STAGES[gIdx-1].id);
+          const locked=!prevDone&&!done;
+          const iconOwned=stage.iconR&&(state.ownedIcons||[]).includes(stage.iconR);
+          html+=`<div class="pve-card ${done?'cleared':locked?'locked':''}" style="${stage.boss?`border-color:${a3color}`:done?'':'border-color:#3a1010'}">
+            <div class="pve-name" style="${stage.boss?`color:${a3color}`:''}">ACT3 #${gIdx+1} ${stage.name}</div>
+            <div class="pve-desc">${stage.desc}</div>
+            <div class="pve-enemies" style="color:#884444">${stage.enemies} opponent${stage.enemies>1?'s':''} (level ${stage.eLevel}) — 35% crit, 25% dodge</div>
+            <div class="pve-reward">+${stage.gpR} 🧪${stage.iconR?` <span class="icon-reward">${iconOwned?'✓':'+'}${stage.iconR}</span>`:''}</div>`;
+          if(done){html+=`<div class="pve-cleared-badge">✓ CLEARED</div>`;}
+          else if(!locked){
+            html+=`<div class="pve-selectors">`;
+            for(let i=0;i<state.combatSlots;i++){
+              html+=`<select id="a3-sel-${stage.id}-${i}"><option value="">— slot ${i+1} —</option>${immortals.map(im=>`<option value="${im.id}">${im.name}${im.prestiged?' 🌟':''}</option>`).join('')}</select>`;
+            }
+            html+=`</div><button class="btn-combat" style="border-color:${a3color};color:${a3color}" onclick="(()=>{const ids=[];for(let i=0;i<${state.combatSlots};i++){const el=document.getElementById('a3-sel-${stage.id}-'+i);if(el&&el.value)ids.push(el.value);}runAct3Stage('${stage.id}',ids);})()">[ FIGHT ]</button>`;
+          } else {html+=`<div style="color:var(--muted);font-size:10px;margin-top:4px">Complete previous stage first</div>`;}
+          html+=`</div>`;
+        });
+        html+=`</div>`;
+      });
+      if((state.combatLog||[]).length){
+        const last=state.combatLog[0];
+        html+=`<div class="combat-log-box" style="margin-top:20px"><p class="combat-log-title">// LAST FIGHT: ${last.stageName||''}</p>`;
+        last.log.forEach(line=>{
+          const cls=line.startsWith('🏆')||line.startsWith('✓')||line.startsWith('⚡')?'win':line.startsWith('💀')?'loss':line.startsWith('──')?'section':'';
+          html+=`<div class="clog-line ${cls}">${line}</div>`;
+        });
+        html+=`</div>`;
+      }
+    }
+
   } else {
-    // PvP
     html+=`<p class="pvp-intro">Challenge other players from the Leaderboard. Click ⚔ next to any player to send a challenge. You may wager gold or diamonds — both players must be able to afford the wager.</p>`;
     html+=`<p class="pvp-sect">// YOUR RECORD</p>`;
     html+=`<p class="pvp-record">Wins: <span class="w">${fmt(state.pvpWins)}</span> &nbsp; Losses: <span class="l">${fmt(state.pvpLosses)}</span></p>`;
@@ -1902,7 +2101,7 @@ function renderCity(){
   html+=`<div style="border-left:4px solid ${banner};padding-left:16px;margin-bottom:24px">
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
       <span style="color:${banner};font-size:20px;letter-spacing:2px">${city.name||'Unnamed City'}</span>
-      ${cb.bannerUnlocked?`<button onclick="(()=>{const d=document.getElementById('city-edit-panel');d.classList.toggle('hidden');})()" style="width:auto;font-size:10px;padding:3px 10px;margin:0;border-color:var(--muted);color:var(--muted)">[ EDIT ]</button>`:''}
+      <button onclick="(()=>{const d=document.getElementById('city-edit-panel');d.classList.toggle('hidden');})()" style="width:auto;font-size:10px;padding:3px 10px;margin:0;border-color:var(--muted);color:var(--muted)">[ EDIT ]</button>
     </div>
     ${city.motto?`<p style="color:var(--muted);font-size:11px;margin-top:4px;font-style:italic">"${esc(city.motto)}"</p>`:''}
     <p style="color:var(--muted);font-size:10px;margin-top:6px">Slots: ${slots} / 8 &nbsp;|&nbsp; Unlocks 1 per 10,000 generations</p>
@@ -1946,13 +2145,23 @@ function renderCity(){
       }
     } else {
       if(!slotBuilding){
-        html+=`<div class="city-slot city-slot-empty"><div style="color:var(--muted);font-size:11px;margin-bottom:8px">Empty slot</div><select id="slot-sel-${i}" style="font-size:10px;margin-bottom:8px;width:100%"><option value="">— choose —</option><option value="breeding">🏗️ Breeding Hall</option><option value="monument">🗿 Monument</option></select><button onclick="(()=>{const v=document.getElementById('slot-sel-${i}').value;if(v)citySetSlot(${i},v);})()" style="width:auto;padding:5px 12px;margin:0;font-size:10px">[ BUILD ]</button></div>`;
+      html+=`<div class="city-slot city-slot-empty"><div style="color:var(--muted);font-size:11px;margin-bottom:8px">Empty slot</div>
+        <select id="slot-sel-${i}" style="font-size:10px;margin-bottom:6px;width:100%">
+          <option value="">— choose building —</option>
+          <option value="breeding">🏗️ Breeding Hall — ${CITY_BUILDINGS.breeding.shortDesc}</option>
+          <option value="culling">⚗️ Culling Hall — ${CITY_BUILDINGS.culling.shortDesc}</option>
+          <option value="monument">🗿 Monument — ${CITY_BUILDINGS.monument.shortDesc}</option>
+        </select>
+        <button onclick="(()=>{const v=document.getElementById('slot-sel-${i}').value;if(v)citySetSlot(${i},v);})()" style="width:auto;padding:5px 12px;margin:0;font-size:10px">[ BUILD ]</button>
+      </div>`;
       } else if(slotBuilding==='breeding'){
-        html+=`<div class="city-slot city-slot-bh"><div style="font-size:22px;margin-bottom:4px">🏗️</div><div style="color:var(--gold);font-size:12px;letter-spacing:1px">BREEDING HALL</div><div style="color:var(--muted);font-size:10px;margin-top:4px">Level ${bhLevel} / 4</div><div style="color:var(--gold);font-size:10px;margin-top:4px">${bhLevel?fmt(bhRate)+' gold/hr':'Not yet active'}</div></div>`;
+        html+=`<div class="city-slot city-slot-bh"><div style="font-size:22px;margin-bottom:4px">🏗️</div><div style="color:var(--gold);font-size:12px;letter-spacing:1px">BREEDING HALL</div><div style="color:var(--muted);font-size:10px;margin-top:4px">Level ${bhLevel} / 4</div><div style="color:var(--gold);font-size:10px;margin-top:4px">${bhLevel?fmt(bhRate)+' gold/hr':'Not yet active'}</div><button onclick="cityRemoveSlot(${i})" style="margin-top:8px;width:auto;padding:3px 8px;font-size:9px;border-color:var(--red);color:var(--red)">[ REMOVE ]</button></div>`;
+      } else if(slotBuilding==='culling'){
+        const chLevel=getCullingHallLevel();const chRate=getCullingHallRate();
+        html+=`<div class="city-slot city-slot-ch"><div style="font-size:22px;margin-bottom:4px">⚗️</div><div style="color:var(--diamond);font-size:12px;letter-spacing:1px">CULLING HALL</div><div style="color:var(--muted);font-size:10px;margin-top:4px">Level ${chLevel} / 4</div><div style="color:var(--diamond);font-size:10px;margin-top:4px">${chLevel?fmt(chRate)+' 💎/hr':'Not yet active'}</div><button onclick="cityRemoveSlot(${i})" style="margin-top:8px;width:auto;padding:3px 8px;font-size:9px;border-color:var(--red);color:var(--red)">[ REMOVE ]</button></div>`;
       } else if(slotBuilding==='monument'){
-        const mIcons=city.monumentIcons||[];
-        const maxM=3+cb.monumentIconBonus;
-        html+=`<div class="city-slot city-slot-monument"><div style="font-size:22px;margin-bottom:4px">🗿</div><div style="color:var(--diamond);font-size:12px;letter-spacing:1px">MONUMENT</div><div style="font-size:18px;margin-top:6px;letter-spacing:4px">${mIcons.join('')||'—'}</div><div style="color:var(--muted);font-size:9px;margin-top:4px">${mIcons.length}/${maxM} icons</div></div>`;
+        const mIcons=city.monumentIcons||[];const maxM=3+cb.monumentIconBonus;
+        html+=`<div class="city-slot city-slot-monument"><div style="font-size:22px;margin-bottom:4px">🗿</div><div style="color:var(--diamond);font-size:12px;letter-spacing:1px">MONUMENT</div><div style="font-size:18px;margin-top:6px;letter-spacing:4px">${mIcons.join('')||'—'}</div><div style="color:var(--muted);font-size:9px;margin-top:4px">${mIcons.length}/${maxM} icons</div><button onclick="cityRemoveSlot(${i})" style="margin-top:8px;width:auto;padding:3px 8px;font-size:9px;border-color:var(--red);color:var(--red)">[ REMOVE ]</button></div>`;
       }
     }
   }
@@ -2036,6 +2245,20 @@ function renderCity(){
     html+=`</div>`;
   }
 
+  if((city.slots||[]).includes('culling')){
+    const chLevel=getCullingHallLevel();const chRate=getCullingHallRate();
+    html+=`<div style="margin-top:28px"><p style="color:var(--diamond);font-size:10px;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--dimblu)">// CULLING HALL</p>`;
+    CITY_BUILDINGS.culling.levels.forEach((lvl,i)=>{
+      const active=chLevel>i;
+      html+=`<div style="border:1px solid ${active?'var(--dimblu)':'var(--border)'};background:${active?'#00090f':'var(--surface)'};padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="color:${active?'var(--diamond)':'var(--text)'};font-size:12px">${lvl.label}</div><div style="color:var(--muted);font-size:10px">${lvl.desc}</div></div>
+        <div style="color:${active?'var(--diamond)':'var(--muted)'};font-size:11px">${active?'✓ ACTIVE':fmt(lvl.target)+' culls needed'}</div>
+      </div>`;
+    });
+    if(chRate>0)html+=`<p style="color:var(--diamond);font-size:11px;margin-top:8px">Current rate: ${fmt(chRate)} 💎/hour</p>`;
+    html+=`</div>`;
+  }
+
   c.innerHTML=html;
 }
 window.renderCity=renderCity;
@@ -2058,7 +2281,7 @@ window.renderLeaderboard=(entries,currentUid)=>{
   const processed=entries.map(e=>({...e,displayScore:Math.floor((safeNum(e.rawFitness||e.highestFitness)*200+safeNum(e.rawGeneration||e.generation)*10+safeNum(e.rawTotalBred||e.totalBred)*3+safeNum(e.rawTotalCulled||e.totalCulled)*5+safeNum(e.rawTotalGoldEarned||e.totalGoldEarned)+safeNum(e.rawTotalDiamondsEarned||e.totalDiamondsEarned)*100)/100)})).sort((a,b)=>b.displayScore-a.displayScore);
   // Store targets in a global map so onclick never has to embed strings in HTML
   window._pvpTargets={};
-  html+=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>SCORE</th><th>MILESTONES</th><th>GEN</th>${hasImmortals?'<th></th>':''}</tr></thead><tbody>`;
+  html+=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>SCORE</th><th>MILESTONES</th><th>GEN</th><th></th></tr></thead><tbody>`;
   processed.forEach((e,i)=>{
     const rank=i+1,isYou=e.uid===currentUid;
     const nameDisplay=`${e.selectedIcon?e.selectedIcon+' ':''}${esc(e.username||'Anonymous')}${isYou?' ◄ you':''}`;
@@ -2070,11 +2293,18 @@ window.renderLeaderboard=(entries,currentUid)=>{
       window._pvpTargets[key]={uid:e.uid,username:e.username||'Anonymous'};
       fightBtn=`<button class="lb-fight-btn" onclick="window._pvpFight('${key}')">⚔</button>`;
     }
-    html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(e.displayScore)}</td><td>${msDisplay}</td><td>${fmt(safeNum(e.generation))}</td>${hasImmortals?`<td>${fightBtn}</td>`:''}</tr>`;
+    const visitBtn=!isYou&&e.hasCityData?`<button class="lb-fight-btn" style="border-color:var(--score);color:var(--score)" onclick="window.visitCity('${e.uid}','${esc(e.username||'Anonymous')}')">🏙️</button>`:'';
+    const btns=[fightBtn,visitBtn].filter(Boolean).join(' ');
+    html+=`<tr class="${rank<=3?`lb-rank-${rank}`:''} ${isYou?'lb-you':''}"><td>${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</td><td class="lb-name">${nameDisplay}</td><td class="lb-score">${fmt(e.displayScore)}</td><td>${msDisplay}</td><td>${fmt(safeNum(e.generation))}</td><td>${btns}</td></tr>`;
   });
   html+=`</tbody></table>`;c.innerHTML=html;
 };
 window.renderLeaderboardLoading=()=>{const c=document.getElementById('leaderboard-container');if(c)c.innerHTML='<p class="lb-loading">Loading leaderboard…</p>';};
+
+window.visitCity=(uid,username)=>{
+  // Calls into auth.js which fetches and displays the city
+  window._visitCityFromAuth?.(uid,username);
+};
 
 window.openUsernameModal=()=>{
   document.getElementById('username-modal').classList.remove('hidden');
@@ -2099,7 +2329,103 @@ window.switchTab=(tab)=>{
   if(tab==='combat')renderCombat();
   if(tab==='leaderboard')window.refreshLeaderboard?.();
   if(tab==='city'){tickCityGold();renderCity();}
+  if(tab==='login')renderLogin();
 };
+
+// ═══════════════════════════════════════════════════════════
+//  DAILY LOGIN
+// ═══════════════════════════════════════════════════════════
+const DAILY_LOGIN_REWARDS=[
+  {day:1,  gp:30,  dia:0,       label:'Day 1',   desc:'+30 🧪'},
+  {day:2,  gp:60,  dia:0,       label:'Day 2',   desc:'+60 🧪'},
+  {day:3,  gp:90,  dia:0,       label:'Day 3',   desc:'+90 🧪'},
+  {day:4,  gp:120, dia:0,       label:'Day 4',   desc:'+120 🧪'},
+  {day:5,  gp:150, dia:0,       label:'Day 5+',  desc:'+150 🧪 (repeating)'},
+];
+const FORTNIGHT_DIA_REWARD=1000000;
+const FORTNIGHT_DAYS=14;
+
+function checkLoginReward(){
+  const today=new Date().toDateString();
+  if(state.lastLoginDate===today)return; // already claimed today
+  const yesterday=new Date(Date.now()-86400000).toDateString();
+  const wasYesterday=state.lastLoginDate===yesterday;
+  if(!wasYesterday&&state.lastLoginDate)state.loginStreak=0; // streak broken
+  state.loginStreak=safeNum(state.loginStreak)+1;
+  state.totalLoginDays=safeNum(state.totalLoginDays)+1;
+  state.lastLoginDate=today;
+  // GP reward
+  const dayIdx=Math.min(state.loginStreak,5)-1;
+  const reward=DAILY_LOGIN_REWARDS[dayIdx>=0?dayIdx:0];
+  const gp=reward.gp;
+  state.genePoints+=gp;
+  addLog(`📅 Day ${state.loginStreak} login! +${gp} 🧪`,'gp');
+  // Fortnight diamond reward
+  if(state.totalLoginDays%FORTNIGHT_DAYS===0){
+    state.diamonds+=FORTNIGHT_DIA_REWARD;
+    state.totalDiamondsEarned+=FORTNIGHT_DIA_REWARD;
+    addLog(`💎 Fortnight bonus! +${fmt(FORTNIGHT_DIA_REWARD)} 💎`,'diamond');
+  }
+  // Don't trigger checkMilestones here to avoid recursive issues on load
+}
+window.checkLoginReward=checkLoginReward;
+
+function renderLogin(){
+  const c=document.getElementById('login-reward-container');if(!c)return;
+  const today=new Date().toDateString();
+  const claimedToday=state.lastLoginDate===today;
+  const streak=safeNum(state.loginStreak);
+  const totalDays=safeNum(state.totalLoginDays);
+  const nextFortnight=FORTNIGHT_DAYS-(totalDays%FORTNIGHT_DAYS);
+
+  let html=`<div style="margin-bottom:20px">
+    <p style="color:var(--text);font-size:14px;letter-spacing:2px;margin-bottom:4px">// DAILY LOGIN REWARDS</p>
+    <p style="color:var(--muted);font-size:11px">Log in every day to build your streak. Missing a day resets it.</p>
+  </div>`;
+
+  // Streak info
+  html+=`<div style="border:1px solid var(--border);background:var(--surface);padding:14px 16px;margin-bottom:20px;display:flex;gap:24px;flex-wrap:wrap">
+    <div><div style="color:var(--muted);font-size:10px;letter-spacing:2px">CURRENT STREAK</div><div style="color:var(--gp);font-size:22px;font-weight:bold">${streak}</div></div>
+    <div><div style="color:var(--muted);font-size:10px;letter-spacing:2px">TOTAL DAYS</div><div style="color:var(--text);font-size:22px">${totalDays}</div></div>
+    <div><div style="color:var(--muted);font-size:10px;letter-spacing:2px">NEXT FORTNIGHT BONUS</div><div style="color:var(--diamond);font-size:16px">${nextFortnight} day${nextFortnight!==1?'s':''}</div></div>
+    <div><div style="color:var(--muted);font-size:10px;letter-spacing:2px">TODAY</div><div style="color:${claimedToday?'var(--green)':'var(--gold)'};font-size:14px">${claimedToday?'✓ CLAIMED':'⏳ NOT YET'}</div></div>
+  </div>`;
+
+  // Reward cards — show current day and next few
+  html+=`<p style="color:var(--gp);font-size:10px;letter-spacing:3px;margin-bottom:12px">// STREAK REWARDS</p>`;
+  html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:24px">`;
+  DAILY_LOGIN_REWARDS.forEach((r,i)=>{
+    const isActive=streak===r.day||(r.day===5&&streak>=5);
+    const isPast=streak>r.day&&!(r.day===5&&streak>=5);
+    const isCurrent=isActive&&!claimedToday;
+    html+=`<div style="border:1px solid ${isActive?'var(--gp)':isPast?'var(--dimgreen)':'var(--border)'};background:${isActive?'#060e06':isPast?'#030803':'var(--surface)'};padding:12px;text-align:center">
+      <div style="color:${isActive?'var(--gp)':isPast?'var(--dimgreen)':'var(--muted)'};font-size:10px;letter-spacing:1px;margin-bottom:6px">${r.label}</div>
+      <div style="font-size:20px;margin-bottom:4px">🧪</div>
+      <div style="color:${isActive?'var(--gp)':'var(--muted)'};font-size:13px;font-weight:bold">${r.gp} GP</div>
+      ${isPast?'<div style="color:var(--dimgreen);font-size:10px;margin-top:4px">✓</div>':''}
+      ${isActive&&!claimedToday?'<div style="color:var(--gold);font-size:10px;margin-top:4px">← TODAY</div>':''}
+      ${isActive&&claimedToday?'<div style="color:var(--green);font-size:10px;margin-top:4px">✓ CLAIMED</div>':''}
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Fortnight reward
+  html+=`<div style="border:1px solid var(--dimblu);background:#00090f;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <p style="color:var(--diamond);font-size:12px;letter-spacing:2px;margin-bottom:4px">FORTNIGHT BONUS</p>
+        <p style="color:var(--muted);font-size:11px">Every 14 consecutive logins</p>
+      </div>
+      <div style="text-align:right">
+        <div style="color:var(--diamond);font-size:18px">+1,000,000 💎</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:2px">Next in ${nextFortnight} day${nextFortnight!==1?'s':''}</div>
+      </div>
+    </div>
+  </div>`;
+
+  c.innerHTML=html;
+}
+window.renderLogin=renderLogin;
 
 window.addLog=(text,type='')=>{
   const el=document.getElementById('log-output');if(!el)return;
