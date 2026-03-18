@@ -363,7 +363,31 @@ const CITY_BUILDINGS={
   monument:{id:'monument',name:'Monument',icon:'🗿',
     shortDesc:'Display your collected icons. Other players see these when they visit your city.',
     desc:'Display your icon collection for visiting players.',},
+  genespire:{id:'genespire',name:'Gene Spire',icon:'🧬',
+    shortDesc:'Produces Gene Points passively every hour. Upgrade each spire for higher output.',
+    desc:'Produces Gene Points (🧪) passively each hour. Each spire can be upgraded.',
+    tiers:[
+      {tier:1,gpH:1,  costGold:0,      costDia:0,      label:'Tier 1',desc:'1 🧪/hr — free to place'},
+      {tier:2,gpH:2,  costGold:500000, costDia:0,      label:'Tier 2',desc:'2 🧪/hr — 500,000 gold'},
+      {tier:3,gpH:3,  costGold:1000000,costDia:0,      label:'Tier 3',desc:'3 🧪/hr — 1,000,000 gold'},
+      {tier:4,gpH:5,  costGold:2000000,costDia:0,      label:'Tier 4',desc:'5 🧪/hr — 2,000,000 gold'},
+      {tier:5,gpH:10, costGold:0,      costDia:100000, label:'Tier 5',desc:'10 🧪/hr — 100,000 💎'},
+    ]},
 };
+function getSpireTier(slotIdx){return safeNum((state.city.spireTiers||{})[slotIdx],1);}
+function getTotalSpireGpH(){
+  const slots=state.city.slots||[];
+  let total=0;
+  const tiers=CITY_BUILDINGS.genespire.tiers;
+  slots.forEach((s,i)=>{
+    if(s==='genespire'){
+      const t=getSpireTier(i);
+      const tierDef=tiers.find(x=>x.tier===t)||tiers[0];
+      total+=tierDef.gpH;
+    }
+  });
+  return total;
+}
 function getBreedingHallLevel(){
   const bred=safeNum(state.totalBred);
   const lvls=CITY_BUILDINGS.breeding.levels;
@@ -645,7 +669,7 @@ function defaultState(){
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
     vault_predator_opens:0,vault_ancient_opens:0,vault_machine_opens:0,
     immortals:[],combatSlots:1,pveCompleted:[],pveAct2Completed:[],pveAct3Completed:[],pvpWins:0,pvpLosses:0,combatLog:[],
-    city:{name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,slots:[null,null,null,null,null,null,null,null],monumentIcons:[],lastGoldTick:null,goldBuffer:0},
+    city:{name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,slots:[null,null,null,null,null,null,null,null],monumentIcons:[],lastGoldTick:null,goldBuffer:0,spireTiers:{}},
     loginStreak:0,lastLoginDate:null,totalLoginDays:0,loginRewardsClaimed:[],
     research:{labInterns:0,geneAnalysts:0,lineageArchivists:0,headOfResearch:false,automatedSequencer:false},
     upgrades:{popCap:0,mutation:0,traitAmp:0,breedYield:0,cullValue:0,selective:0,cullInsight:0,lineageMem:0,hybridVigor:0,adaptiveGenetics:0,autoBreeder:0,traitCapBoost:0,eliteMutation:0,deepArchive:0,secretDecoder:0},
@@ -714,7 +738,7 @@ function getCityBonuses(){
 
 function getCitySlots(){
   if((state.pveAct2Completed||[]).length<PVE_ACT2_STAGES.length)return 0;
-  return Math.min(8,Math.max(1,Math.floor(safeNum(state.generation)/10000)));
+  return Math.max(1, Math.floor(safeNum(state.generation)/10000));
 }
 function isCityUnlocked(){return getCitySlots()>0;}
 
@@ -802,6 +826,7 @@ function sanitiseState(s){
       slots:Array.isArray(s.city?.slots)?s.city.slots:[null,null,null,null,null,null,null,null],
       monumentIcons:Array.isArray(s.city?.monumentIcons)?s.city.monumentIcons:[],
       lastGoldTick:s.city?.lastGoldTick||null,goldBuffer:safeNum(s.city?.goldBuffer),
+      spireTiers:s.city?.spireTiers&&typeof s.city.spireTiers==='object'?s.city.spireTiers:{},
     },
     research:{labInterns:safeNum(s.research?.labInterns),geneAnalysts:safeNum(s.research?.geneAnalysts),lineageArchivists:safeNum(s.research?.lineageArchivists),headOfResearch:!!s.research?.headOfResearch,automatedSequencer:!!s.research?.automatedSequencer},
     upgrades:{popCap:safeNum(s.upgrades?.popCap),mutation:safeNum(s.upgrades?.mutation),traitAmp:safeNum(s.upgrades?.traitAmp),breedYield:safeNum(s.upgrades?.breedYield),cullValue:safeNum(s.upgrades?.cullValue),selective:safeNum(s.upgrades?.selective),cullInsight:safeNum(s.upgrades?.cullInsight),lineageMem:safeNum(s.upgrades?.lineageMem),hybridVigor:safeNum(s.upgrades?.hybridVigor),adaptiveGenetics:safeNum(s.upgrades?.adaptiveGenetics),autoBreeder:safeNum(s.upgrades?.autoBreeder),traitCapBoost:safeNum(s.upgrades?.traitCapBoost),eliteMutation:safeNum(s.upgrades?.eliteMutation),deepArchive:safeNum(s.upgrades?.deepArchive),secretDecoder:safeNum(s.upgrades?.secretDecoder)},
@@ -1285,6 +1310,14 @@ function tickCityGold(){
       if(earned>0){state.diamonds+=earned;state.totalDiamondsEarned+=earned;addLog(`⚗️ Culling Hall: +${fmt(earned)} 💎 (${fmt1(hoursElapsed)}h).`,'diamond');}
     }
   }
+  // Gene Spires → gene points
+  if((state.city.slots||[]).includes('genespire')){
+    const spireRate=getTotalSpireGpH();
+    if(spireRate>0){
+      const earned=Math.floor(spireRate*hoursElapsed);
+      if(earned>0){state.genePoints+=earned;addLog(`🧬 Gene Spires: +${fmt(earned)} 🧪 (${fmt1(hoursElapsed)}h).`,'gp');}
+    }
+  }
   state.city.lastGoldTick=new Date(now).toISOString();
 }
 window.tickCityGold=tickCityGold;
@@ -1295,16 +1328,43 @@ window.cityRemoveSlot=(slotIdx)=>{
   if(!state.city.slots[slotIdx])return;
   const old=state.city.slots[slotIdx];
   state.city.slots[slotIdx]=null;
+  // Clear spire tier if removing a spire
+  if(old==='genespire'&&state.city.spireTiers) delete state.city.spireTiers[slotIdx];
+  window._openTileIdx=null;
   addLog(`🏙️ Removed ${CITY_BUILDINGS[old]?.name||old} from slot ${slotIdx+1}.`,'highlight');
+  renderCity();
+};
+window.upgradeGenespire=(slotIdx)=>{
+  if(state.city.slots[slotIdx]!=='genespire')return;
+  const tiers=CITY_BUILDINGS.genespire.tiers;
+  const curTier=getSpireTier(slotIdx);
+  if(curTier>=tiers.length)return addLog('Gene Spire already at maximum tier.','warn');
+  const next=tiers.find(t=>t.tier===curTier+1);
+  if(!next)return;
+  if(next.costGold>0&&state.gold<next.costGold)return addLog(`Need ${fmt(next.costGold)} gold to upgrade.`,'warn');
+  if(next.costDia>0&&state.diamonds<next.costDia)return addLog(`Need ${fmt(next.costDia)} 💎 to upgrade.`,'warn');
+  if(next.costGold>0){state.gold-=next.costGold;}
+  if(next.costDia>0){state.diamonds-=next.costDia;state.totalDiamondsSpent=safeNum(state.totalDiamondsSpent)+next.costDia;}
+  if(!state.city.spireTiers)state.city.spireTiers={};
+  state.city.spireTiers[slotIdx]=curTier+1;
+  addLog(`🧬 Slot ${slotIdx+1} spire → Tier ${curTier+1} (${next.gpH} 🧪/hr).`,'gp');
   renderCity();
 };
 // Build a slot
 window.citySetSlot=(slotIdx,buildingId)=>{
   if(!isCityUnlocked())return;
   const slots=getCitySlots();
-  if(slotIdx>=slots)return addLog('That slot is not yet unlocked.','warn');
+  if(slotIdx>=slots)return addLog('That slot is not yet unlocked (1 per 10,000 generations).','warn');
   if(slotIdx===0)return addLog('Slot 0 is reserved for the Research Institute.','warn');
   if(!CITY_BUILDINGS[buildingId])return addLog('Unknown building.','warn');
+  // Enforce max 10 per production building
+  const MAX_PROD=10;
+  if(buildingId==='breeding'||buildingId==='culling'||buildingId==='genespire'){
+    const count=(state.city.slots||[]).filter(s=>s===buildingId).length;
+    if(count>=MAX_PROD)return addLog(`Maximum ${MAX_PROD} ${CITY_BUILDINGS[buildingId].name}s already placed.`,'warn');
+  }
+  // Grow slots array if needed
+  while(state.city.slots.length<=slotIdx) state.city.slots.push(null);
   state.city.slots[slotIdx]=buildingId;
   addLog(`🏙️ Slot ${slotIdx+1}: ${CITY_BUILDINGS[buildingId].name} placed.`,'highlight');
   renderCity();
@@ -2077,6 +2137,86 @@ function renderGeneVault(){
   c.innerHTML=html;
 }
 
+window._openTileIdx=null;
+window.openCityTile=(idx)=>{
+  const editor=document.getElementById('city-tile-editor');
+  const content=document.getElementById('city-tile-editor-content');
+  if(!editor||!content)return;
+  // Toggle off if clicking same tile
+  if(window._openTileIdx===idx&&!editor.classList.contains('hidden')){
+    editor.classList.add('hidden');window._openTileIdx=null;return;
+  }
+  window._openTileIdx=idx;
+  editor.classList.remove('hidden');
+  const city=state.city;
+  const isRI=idx===0;
+  const b=city.slots[idx]||null;
+  const bhCount=(city.slots||[]).filter(s=>s==='breeding').length;
+  const chCount=(city.slots||[]).filter(s=>s==='culling').length;
+  const bhLevel=getBreedingHallLevel();
+  const chLevel=getCullingHallLevel();
+  let h=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="color:var(--text);font-size:12px">Slot ${idx+1}</span><button onclick="document.getElementById('city-tile-editor').classList.add('hidden');window._openTileIdx=null;" style="width:auto;padding:2px 8px;margin:0;font-size:10px;border-color:var(--muted);color:var(--muted)">[ CLOSE ]</button></div>`;
+  if(isRI){
+    if(!b){
+      h+=`<p style="color:var(--muted);font-size:11px;margin-bottom:8px">🏛️ The Research Institute is the heart of your city. Build it here.</p>
+          <button onclick="cityBuildRI()" style="width:auto;padding:6px 14px;margin:0;border-color:var(--score);color:var(--score)">[ BUILD RESEARCH INSTITUTE ]</button>`;
+    } else {
+      h+=`<p style="color:var(--score);font-size:12px;margin-bottom:4px">🏛️ Research Institute — Level ${city.riLevel} / 3</p>
+          <p style="color:var(--muted);font-size:11px">The Institute cannot be removed.</p>`;
+    }
+  } else if(!b){
+    h+=`<p style="color:var(--muted);font-size:11px;margin-bottom:10px">Choose what to build in this slot:</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">`;
+    const opts=[
+      {id:'breeding',emoji:'🏗️',name:'Breeding Hall',desc:`Generates ${fmt(10000)}–${fmt(50000)} gold/hr. Scales with total breeds.`,max:10,cur:bhCount},
+      {id:'culling', emoji:'⚗️',name:'Culling Hall', desc:`Generates ${fmt(1000)}–${fmt(10000)} 💎/hr. Scales with total culls.`,max:10,cur:chCount},
+      {id:'monument',emoji:'🗿',name:'Monument',     desc:'Display your icon collection to visiting players.',max:999,cur:0},
+      {id:'genespire',emoji:'🧬',name:'Gene Spire',  desc:`Generates 1–10 🧪/hr. Upgrade individually. Tiers: free / 500k gold / 1m gold / 2m gold / 100k 💎.`,max:10,cur:(state.city.slots||[]).filter(s=>s==='genespire').length},
+    ];
+    opts.forEach(o=>{
+      const atMax=o.cur>=o.max;
+      h+=`<div style="border:1px solid ${atMax?'var(--border)':'var(--dimgreen)'};background:var(--surface);padding:10px;opacity:${atMax?.5:1}">
+        <div style="font-size:20px">${o.emoji}</div>
+        <div style="color:var(--text);font-size:12px;margin:4px 0">${o.name}</div>
+        <div style="color:var(--muted);font-size:10px;margin-bottom:8px">${o.desc}</div>
+        <div style="color:var(--muted);font-size:9px;margin-bottom:6px">${o.cur}/${o.max} placed</div>
+        ${atMax?`<div style="color:var(--red);font-size:10px">MAX REACHED</div>`:`<button onclick="citySetSlot(${idx},'${o.id}')" style="width:auto;padding:4px 10px;margin:0;font-size:10px">[ BUILD ]</button>`}
+      </div>`;
+    });
+    h+=`</div>`;
+  } else {
+    const bldg=CITY_BUILDINGS[b];
+    h+=`<p style="font-size:20px;margin-bottom:4px">${{breeding:'🏗️',culling:'⚗️',monument:'🗿'}[b]||'?'}</p>
+        <p style="color:var(--text);font-size:12px;margin-bottom:4px">${bldg?.name||b}</p>
+        <p style="color:var(--muted);font-size:11px;margin-bottom:10px">${bldg?.desc||''}</p>`;
+    if(b==='breeding'){h+=`<p style="color:var(--gold);font-size:11px;margin-bottom:10px">Level ${bhLevel}/4 · ${bhLevel?fmt(getBreedingHallRate())+' gold/hr':'Inactive'}</p>`;}
+    if(b==='culling'){h+=`<p style="color:var(--diamond);font-size:11px;margin-bottom:10px">Level ${chLevel}/4 · ${chLevel?fmt(getCullingHallRate())+' 💎/hr':'Inactive'}</p>`;}
+    if(b==='monument'){const mi=city.monumentIcons||[];const mm=3+getCityBonuses().monumentIconBonus;h+=`<p style="color:#818cf8;font-size:11px;margin-bottom:10px">${mi.join('')||'No icons'} (${mi.length}/${mm})</p>`;}
+    if(b==='genespire'){
+      const curTier=getSpireTier(idx);
+      const tiers=CITY_BUILDINGS.genespire.tiers;
+      const curDef=tiers.find(t=>t.tier===curTier)||tiers[0];
+      const nextDef=tiers.find(t=>t.tier===curTier+1);
+      h+=`<p style="color:var(--gp);font-size:11px;margin-bottom:6px">Tier ${curTier}/5 · ${curDef.gpH} 🧪/hr</p>`;
+      if(nextDef){
+        const canUpg=(nextDef.costGold>0&&state.gold>=nextDef.costGold)||(nextDef.costDia>0&&state.diamonds>=nextDef.costDia)||(nextDef.costGold===0&&nextDef.costDia===0);
+        h+=`<p style="color:var(--muted);font-size:10px;margin-bottom:8px">Next: Tier ${nextDef.tier} → ${nextDef.gpH} 🧪/hr · ${nextDef.costGold>0?fmt(nextDef.costGold)+' gold':nextDef.costDia>0?fmt(nextDef.costDia)+' 💎':'free'}</p>
+        <button onclick="upgradeGenespire(${idx})" style="width:auto;padding:5px 12px;margin:0 8px 10px 0;font-size:10px;border-color:var(--gp);color:var(--gp);${canUpg?'':'opacity:.4;cursor:not-allowed'}">[ UPGRADE → TIER ${nextDef.tier} ]</button>`;
+      } else {
+        h+=`<p style="color:var(--gp);font-size:11px;margin-bottom:10px">✦ MAX TIER</p>`;
+      }
+      // Show all tier progression
+      h+=`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">`;
+      tiers.forEach(t=>{
+        const done=curTier>=t.tier;
+        h+=`<div style="border:1px solid ${done?'var(--gp)':'var(--border)'};padding:4px 8px;font-size:9px;color:${done?'var(--gp)':'var(--muted)'}${curTier===t.tier?' font-weight:bold':''}">${t.gpH}🧪${done?'✓':''}</div>`;
+      });
+      h+=`</div>`;
+    }
+  }
+  content.innerHTML=h;
+};
+
 function renderCity(){
   const c=document.getElementById('city-container');if(!c)return;
   const act2Done=(state.pveAct2Completed||[]).length>=PVE_ACT2_STAGES.length;
@@ -2098,13 +2238,16 @@ function renderCity(){
   let html='';
   // Header
   const banner=city.bannerColor||'var(--score)';
-  html+=`<div style="border-left:4px solid ${banner};padding-left:16px;margin-bottom:24px">
+  const bhCount=(city.slots||[]).filter(s=>s==='breeding').length;
+  const chCount=(city.slots||[]).filter(s=>s==='culling').length;
+  html+=`<div style="border-left:4px solid ${banner};padding-left:16px;margin-bottom:20px">
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
       <span style="color:${banner};font-size:20px;letter-spacing:2px">${city.name||'Unnamed City'}</span>
       <button onclick="(()=>{const d=document.getElementById('city-edit-panel');d.classList.toggle('hidden');})()" style="width:auto;font-size:10px;padding:3px 10px;margin:0;border-color:var(--muted);color:var(--muted)">[ EDIT ]</button>
     </div>
     ${city.motto?`<p style="color:var(--muted);font-size:11px;margin-top:4px;font-style:italic">"${esc(city.motto)}"</p>`:''}
-    <p style="color:var(--muted);font-size:10px;margin-top:6px">Slots: ${slots} / 8 &nbsp;|&nbsp; Unlocks 1 per 10,000 generations</p>
+    <p style="color:var(--muted);font-size:10px;margin-top:6px">${fmt(slots)} slots (1 per 10,000 gen) &nbsp;·&nbsp; 🏗️ ${bhCount}/10 &nbsp;·&nbsp; ⚗️ ${chCount}/10 &nbsp;·&nbsp; 🧬 ${spireCount}/10${totalSpireGpH>0?` (${totalSpireGpH}🧪/hr)`:''}
+</p>
   </div>`;
 
   // Edit panel
@@ -2127,45 +2270,48 @@ function renderCity(){
     </div>`:''}
   </div>`;
 
-  // Slot grid
-  html+=`<p style="color:var(--text);font-size:10px;letter-spacing:3px;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid var(--border)">// CITY SLOTS</p>`;
-  html+=`<div class="city-slots">`;
-  for(let i=0;i<8;i++){
-    const unlocked=i<slots;
+  // ── EMOJI CITY GRID ──────────────────────────────────────
+  // Building config: emoji, colour, tooltip line
+  const spireCount=(city.slots||[]).filter(s=>s==='genespire').length;
+  const totalSpireGpH=getTotalSpireGpH();
+  const BLDG_DISPLAY={
+    research: {emoji:'🏛️', color:'var(--score)',  label:'Institute',  tip:`RI Lv${city.riLevel} · ${(city.riSkills||[]).length}/40 skills`},
+    breeding: {emoji:'🏗️', color:'var(--gold)',   label:'Breeding',   tip:`${bhLevel?fmt(bhRate)+'g/hr':'Inactive'}`},
+    culling:  {emoji:'⚗️', color:'var(--diamond)',label:'Culling',    tip:`${getCullingHallLevel()?fmt(getCullingHallRate())+'💎/hr':'Inactive'}`},
+    monument: {emoji:'🗿', color:'#818cf8',       label:'Monument',   tip:`${(city.monumentIcons||[]).join('')||'No icons'}`},
+    genespire:{emoji:'🧬', color:'var(--gp)',     label:'Gene Spire', tip:(i)=>`T${getSpireTier(i)} · ${CITY_BUILDINGS.genespire.tiers.find(t=>t.tier===getSpireTier(i))?.gpH||1}🧪/hr`},
+  };
+  const GRID_COLS=6;
+
+  html+=`<p style="color:var(--text);font-size:10px;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">// CITY GRID — click a tile to manage it</p>`;
+  html+=`<div class="city-emoji-grid">`;
+
+  for(let i=0;i<slots;i++){
+    const b=city.slots[i]||null;
     const isRI=i===0;
-    const slotBuilding=city.slots[i];
-    if(!unlocked){
-      const genNeeded=(i+1)*10000;
-      html+=`<div class="city-slot city-slot-locked"><div style="color:var(--border);font-size:11px">🔒 LOCKED</div><div style="color:var(--border);font-size:9px;margin-top:4px">${fmt(genNeeded)} generations</div></div>`;
-    } else if(isRI){
-      if(!slotBuilding){
-        html+=`<div class="city-slot city-slot-empty"><div style="font-size:22px;margin-bottom:8px">🏛️</div><div style="color:var(--text);font-size:12px;margin-bottom:6px">Research Institute</div><div style="color:var(--muted);font-size:10px;margin-bottom:10px">The heart of your city.</div><button onclick="cityBuildRI()" style="width:auto;padding:6px 14px;margin:0;font-size:11px;border-color:var(--score);color:var(--score)">[ BUILD ]</button></div>`;
-      } else {
-        html+=`<div class="city-slot city-slot-ri"><div style="font-size:22px;margin-bottom:4px">🏛️</div><div style="color:var(--score);font-size:12px;letter-spacing:1px">RESEARCH INSTITUTE</div><div style="color:var(--muted);font-size:10px;margin-top:4px">Level ${city.riLevel} / 3</div><div style="color:var(--gp);font-size:10px;margin-top:4px">${(city.riSkills||[]).length} / 40 skills</div></div>`;
-      }
-    } else {
-      if(!slotBuilding){
-      html+=`<div class="city-slot city-slot-empty"><div style="color:var(--muted);font-size:11px;margin-bottom:8px">Empty slot</div>
-        <select id="slot-sel-${i}" style="font-size:10px;margin-bottom:6px;width:100%">
-          <option value="">— choose building —</option>
-          <option value="breeding">🏗️ Breeding Hall — ${CITY_BUILDINGS.breeding.shortDesc}</option>
-          <option value="culling">⚗️ Culling Hall — ${CITY_BUILDINGS.culling.shortDesc}</option>
-          <option value="monument">🗿 Monument — ${CITY_BUILDINGS.monument.shortDesc}</option>
-        </select>
-        <button onclick="(()=>{const v=document.getElementById('slot-sel-${i}').value;if(v)citySetSlot(${i},v);})()" style="width:auto;padding:5px 12px;margin:0;font-size:10px">[ BUILD ]</button>
+    if(b){
+      const d=BLDG_DISPLAY[b]||{emoji:'❓',color:'var(--muted)',label:'?',tip:''};
+      const tipStr=typeof d.tip==='function'?d.tip(i):d.tip;
+      html+=`<div class="city-tile city-tile-built" style="border-color:${d.color}" onclick="openCityTile(${i})" title="${esc(tipStr)}">
+        <span class="city-tile-emoji">${d.emoji}</span>
+        <span class="city-tile-label" style="color:${d.color}">${d.label}</span>
+        ${isRI?`<span class="city-tile-sub">Lv ${city.riLevel}</span>`:`<span class="city-tile-sub">${tipStr}</span>`}
       </div>`;
-      } else if(slotBuilding==='breeding'){
-        html+=`<div class="city-slot city-slot-bh"><div style="font-size:22px;margin-bottom:4px">🏗️</div><div style="color:var(--gold);font-size:12px;letter-spacing:1px">BREEDING HALL</div><div style="color:var(--muted);font-size:10px;margin-top:4px">Level ${bhLevel} / 4</div><div style="color:var(--gold);font-size:10px;margin-top:4px">${bhLevel?fmt(bhRate)+' gold/hr':'Not yet active'}</div><button onclick="cityRemoveSlot(${i})" style="margin-top:8px;width:auto;padding:3px 8px;font-size:9px;border-color:var(--red);color:var(--red)">[ REMOVE ]</button></div>`;
-      } else if(slotBuilding==='culling'){
-        const chLevel=getCullingHallLevel();const chRate=getCullingHallRate();
-        html+=`<div class="city-slot city-slot-ch"><div style="font-size:22px;margin-bottom:4px">⚗️</div><div style="color:var(--diamond);font-size:12px;letter-spacing:1px">CULLING HALL</div><div style="color:var(--muted);font-size:10px;margin-top:4px">Level ${chLevel} / 4</div><div style="color:var(--diamond);font-size:10px;margin-top:4px">${chLevel?fmt(chRate)+' 💎/hr':'Not yet active'}</div><button onclick="cityRemoveSlot(${i})" style="margin-top:8px;width:auto;padding:3px 8px;font-size:9px;border-color:var(--red);color:var(--red)">[ REMOVE ]</button></div>`;
-      } else if(slotBuilding==='monument'){
-        const mIcons=city.monumentIcons||[];const maxM=3+cb.monumentIconBonus;
-        html+=`<div class="city-slot city-slot-monument"><div style="font-size:22px;margin-bottom:4px">🗿</div><div style="color:var(--diamond);font-size:12px;letter-spacing:1px">MONUMENT</div><div style="font-size:18px;margin-top:6px;letter-spacing:4px">${mIcons.join('')||'—'}</div><div style="color:var(--muted);font-size:9px;margin-top:4px">${mIcons.length}/${maxM} icons</div><button onclick="cityRemoveSlot(${i})" style="margin-top:8px;width:auto;padding:3px 8px;font-size:9px;border-color:var(--red);color:var(--red)">[ REMOVE ]</button></div>`;
-      }
+    } else {
+      html+=`<div class="city-tile city-tile-empty" onclick="openCityTile(${i})" title="Empty — click to build">
+        <span class="city-tile-emoji" style="opacity:.25">➕</span>
+        <span class="city-tile-label" style="color:var(--border)">Empty</span>
+        <span class="city-tile-sub" style="color:var(--border)">Slot ${i+1}</span>
+      </div>`;
     }
   }
   html+=`</div>`;
+
+  // Inline tile editor (shows below grid, toggled by openCityTile)
+  html+=`<div id="city-tile-editor" class="hidden" style="border:1px solid var(--border);background:var(--surface);padding:14px;margin-top:12px;margin-bottom:20px">
+    <div id="city-tile-editor-content"></div>
+  </div>`;
+
 
   // Research Institute full panel
   if(city.slots[0]==='research'){
