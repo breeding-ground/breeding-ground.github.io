@@ -401,18 +401,47 @@ h2:first-child { margin-top:0; }
 .h/* ── CITY ───────────────────────────────────────────── */
 .city-slots {
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
   gap:10px; margin-bottom:20px;
 }
 .city-slot {
   border:1px solid var(--border); background:var(--surface);
-  padding:16px 14px; min-height:110px;
+  padding:14px 12px; min-height:90px;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  text-align:center;
+  text-align:center; border-radius:6px;
 }
-.city-slot-locked  { opacity:.35; }
-.city-slot-empty   { border-style:dashed; }
-.city-slot-ri      { border-color:var(--score); background:#0a0510; }
-.city-slot-bh      { border-color:var(--gold);  background:#0a0900; }
-.city-slot-monument{ border-color:var(--diamond);background:#00090f; }
+.city-slot-locked  { opacity:.3; }
+.city-slot-empty   { border-style:dashed; border-radius:6px; }
+.city-slot-ri      { border-color:var(--score); background:#0a0510; border-width:2px; }
+.city-slot-bh      { border-color:var(--gold);  background:#0a0900; border-width:2px; }
+.city-slot-ch      { border-color:var(--diamond);background:#00090f; border-width:2px; }
+.city-slot-monument{ border-color:#818cf8;       background:#08080f; border-width:2px; }
+
+/* ── LOGIN STREAK WIDGET ────────────────────────────── */
+#streak-widget {
+  position:fixed; bottom:16px; right:16px;
+  display:flex; flex-direction:column; align-items:center;
+  z-index:50; pointer-events:none; user-select:none;
+}
+.streak-fire {
+  font-size:28px; line-height:1;
+  animation: flicker 1.4s ease-in-out infinite alternate;
+  display:inline-block;
+}
+@keyframes flicker {
+  0%   { transform:scaleY(1)   scaleX(1)    translateY(0);   opacity:1;    filter:brightness(1); }
+  25%  { transform:scaleY(1.06)scaleX(0.97) translateY(-1px);opacity:.95;  filter:brightness(1.1); }
+  50%  { transform:scaleY(0.97)scaleX(1.03) translateY(1px); opacity:1;    filter:brightness(0.95); }
+  75%  { transform:scaleY(1.04)scaleX(0.98) translateY(-1px);opacity:.97;  filter:brightness(1.05); }
+  100% { transform:scaleY(1.01)scaleX(1.01) translateY(0);   opacity:.98;  filter:brightness(1.02); }
+}
+.streak-count {
+  color:var(--gold); font-size:13px; font-family:var(--font);
+  font-weight:bold; line-height:1; margin-top:2px;
+}
+.streak-label {
+  color:var(--muted); font-size:9px; font-family:var(--font);
+  letter-spacing:1px; margin-top:1px;
+}
+
 .hidden { display:none !important; }
