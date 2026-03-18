@@ -112,6 +112,12 @@ function getImmortalStats(im){
   crit=Math.max(crit,ps.crit);
   dodge=Math.max(dodge,ps.dodge);
   regen+=ps.regen;
+  // City Research Institute bonuses
+  const cb=getCityBonuses();
+  atk=Math.floor((atk+cb.immortalAtkBonus)*cb.immortalStatMult);
+  spd=Math.floor(spd*cb.immortalStatMult);
+  def=Math.floor((def+cb.immortalDefBonus)*cb.immortalStatMult);
+  hp=Math.floor((hp+cb.immortalHpBonus)*cb.immortalStatMult);
   return{atk,spd,def,hp,crit,dodge,regen};
 }
 
@@ -271,6 +277,92 @@ function makePveAct2Enemy(level,idx=0){
   };
 }
 
+// ═══════════════════════════════════════════════════════════
+//  RESEARCH INSTITUTE SKILL TREE
+//  5 branches × 8 tiers = 40 skills
+//  riLevel 1 = all icons unlocked (RI built)
+//  riLevel 2 = sacrifice maxed immortal
+//  riLevel 3 = all milestones complete
+// ═══════════════════════════════════════════════════════════
+const RI_BRANCHES=[
+  {id:'genetics',name:'GENETICS',color:'#39ff14',skills:[
+    {id:'ri_g1',cost:50, riLevel:1,name:'Selective Pressure',  effect:'+5% trait amplifier',         desc:'Better chance of inheriting stronger parent traits.'},
+    {id:'ri_g2',cost:75, riLevel:1,name:'Mutation Catalyst',   effect:'+0.05 mutation rate',          desc:'Slightly higher baseline mutation frequency.'},
+    {id:'ri_g3',cost:100,riLevel:1,name:'Genetic Memory',      effect:'+10% lineage recall',          desc:'Offspring better remember ancestral peak traits.'},
+    {id:'ri_g4',cost:150,riLevel:1,name:'Adaptive Evolution',  effect:'Trait cap +3',                 desc:'Push past the natural genetic ceiling.'},
+    {id:'ri_g5',cost:200,riLevel:2,name:'Forced Mutation',     effect:'Beneficial mutations +1 level sooner',desc:'Dark arts applied to genetic timing.'},
+    {id:'ri_g6',cost:300,riLevel:2,name:'Genetic Supremacy',   effect:'+1 to all positive mutations', desc:'Every beneficial mutation is amplified.'},
+    {id:'ri_g7',cost:400,riLevel:3,name:'Perfect Sequence',    effect:'Trait cap +10',                desc:'The theoretical maximum is rewritten.'},
+    {id:'ri_g8',cost:500,riLevel:3,name:'Genesis Code',        effect:'All trait gains ×1.25',        desc:'The fundamental code of life, optimised.'},
+  ]},
+  {id:'economy',name:'ECONOMY',color:'#f0c040',skills:[
+    {id:'ri_e1',cost:50, riLevel:1,name:'Market Basics',       effect:'Cull gold +10%',               desc:'Extract more value from culled specimens.'},
+    {id:'ri_e2',cost:75, riLevel:1,name:'Trade Networks',      effect:'Breed gold +10%',              desc:'Each birth valued higher by the market.'},
+    {id:'ri_e3',cost:100,riLevel:1,name:'Diamond Rush',        effect:'Research diamonds +15%',       desc:'Your team extracts more from every sample.'},
+    {id:'ri_e4',cost:150,riLevel:1,name:'Vault Discount',      effect:'Gene Vault cost -10%',         desc:'Bulk purchasing agreements secured.'},
+    {id:'ri_e5',cost:200,riLevel:2,name:'Economic Engine',     effect:'Breeding Hall gold +25%',      desc:'Passive production infrastructure enhanced.'},
+    {id:'ri_e6',cost:300,riLevel:2,name:'Financial Mastery',   effect:'All gold income +20%',         desc:'Every gold source optimised.'},
+    {id:'ri_e7',cost:400,riLevel:3,name:'Diamond Empire',      effect:'All diamond income +30%',      desc:'Diamond supply chains fully controlled.'},
+    {id:'ri_e8',cost:500,riLevel:3,name:'Infinite Coffers',    effect:'Breed gold ×2',                desc:'Breeding is now an industrial operation.'},
+  ]},
+  {id:'warfare',name:'WARFARE',color:'#fb923c',skills:[
+    {id:'ri_w1',cost:50, riLevel:1,name:'Combat Basics',       effect:'PvE GP +1 per stage',          desc:'Victories yield more tactical experience.'},
+    {id:'ri_w2',cost:75, riLevel:1,name:'Conditioning',        effect:'All immortal HP +100',         desc:'Tougher training regimes.'},
+    {id:'ri_w3',cost:100,riLevel:1,name:'Battle Hardening',    effect:'All immortal ATK +20',         desc:'Combat-tested improvements.'},
+    {id:'ri_w4',cost:150,riLevel:1,name:'Iron Discipline',     effect:'All immortal DEF +20',         desc:'Defensive training perfected.'},
+    {id:'ri_w5',cost:200,riLevel:2,name:'Elite Training',      effect:'All immortal stats +15%',      desc:'Elite units pushing beyond limits.'},
+    {id:'ri_w6',cost:300,riLevel:2,name:'War Doctrine',        effect:'PvP win: +5 bonus GP',         desc:'Victory in the arena yields knowledge.'},
+    {id:'ri_w7',cost:400,riLevel:3,name:'Legendary Forces',    effect:'All immortal stats +25%',      desc:'Legendary status reached.'},
+    {id:'ri_w8',cost:500,riLevel:3,name:'Eternal Warriors',    effect:'Prestige costs -25%',          desc:'The path to prestige is cleared.'},
+  ]},
+  {id:'arcana',name:'ARCANA',color:'#a78bfa',skills:[
+    {id:'ri_a1',cost:50, riLevel:1,name:'Arcane Research',     effect:'Milestone GP +1 each',         desc:'Hidden knowledge yields extra rewards.'},
+    {id:'ri_a2',cost:75, riLevel:1,name:'Secret Lore',         effect:'Secret milestone GP +2',       desc:'The hidden paths better rewarded.'},
+    {id:'ri_a3',cost:100,riLevel:1,name:'Temporal Flux',       effect:'+1 GP per 100 gen',            desc:'Time itself yields more reward.'},
+    {id:'ri_a4',cost:150,riLevel:1,name:'Mystic Economy',      effect:'Vault dupe refund +10%',       desc:'Even duplicates have hidden value.'},
+    {id:'ri_a5',cost:200,riLevel:2,name:'City Banner',         effect:'Unlocks banner colour',        desc:'Your city\'s colours may now be chosen.',cosmetic:'banner'},
+    {id:'ri_a6',cost:300,riLevel:2,name:'Dark Acceleration',   effect:'Auto-breeder +25% speed',      desc:'Dark arts applied to automation.'},
+    {id:'ri_a7',cost:400,riLevel:3,name:'Transcendent Path',   effect:'Prestige skill costs -20%',    desc:'The prestige tree is better understood.'},
+    {id:'ri_a8',cost:500,riLevel:3,name:'Omniscient',          effect:'All GP gains +30%',            desc:'You see all paths.'},
+  ]},
+  {id:'legacy',name:'LEGACY',color:'#c084fc',skills:[
+    {id:'ri_l1',cost:50, riLevel:1,name:'City Motto',          effect:'Unlocks city motto',           desc:'Give your city a motto.',cosmetic:'motto'},
+    {id:'ri_l2',cost:75, riLevel:1,name:'Heritage',            effect:'Score: gen×5 bonus',           desc:'Your generation count is worth more.'},
+    {id:'ri_l3',cost:100,riLevel:1,name:'Monument Expansion',  effect:'Monument: +2 icon slots',      desc:'More icons displayed on your monument.'},
+    {id:'ri_l4',cost:150,riLevel:1,name:'Dynasty Archives',    effect:'All milestone GP +1',          desc:'Your milestones yield greater rewards.'},
+    {id:'ri_l5',cost:200,riLevel:2,name:'Dynasty Seal',        effect:'Leaderboard: city level badge',desc:'Your city\'s power visible to all.'},
+    {id:'ri_l6',cost:300,riLevel:2,name:'Grand Library',       effect:'Research rates ×1.25',         desc:'Knowledge accelerates your diamonds.'},
+    {id:'ri_l7',cost:400,riLevel:3,name:'Imperial Legacy',     effect:'All milestone GP ×1.5',        desc:'Your legacy grows ever stronger.'},
+    {id:'ri_l8',cost:500,riLevel:3,name:'Absolute Dominion',   effect:'All city bonuses ×1.1',        desc:'Total mastery over your domain.',cosmetic:'dominion'},
+  ]},
+];
+const RI_SKILL_MAP={};
+RI_BRANCHES.forEach(b=>b.skills.forEach(s=>{RI_SKILL_MAP[s.id]={...s,branch:b.id};}));
+
+// Building types available for city slots (slot 0 = research always)
+const CITY_BUILDINGS={
+  breeding:{id:'breeding',name:'Breeding Hall',icon:'🏗️',desc:'Produces gold passively based on total breeds.',
+    levels:[
+      {target:10000, gpH:10000,  label:'10k breeds',  desc:'Produces 10,000 gold/hour'},
+      {target:20000, gpH:20000,  label:'20k breeds',  desc:'Produces 20,000 gold/hour'},
+      {target:30000, gpH:30000,  label:'30k breeds',  desc:'Produces 30,000 gold/hour'},
+      {target:50000, gpH:50000,  label:'50k breeds',  desc:'Produces 50,000 gold/hour'},
+    ]},
+  monument:{id:'monument',name:'Monument',icon:'🗿',desc:'Display your icon collection for visiting players.',},
+};
+function getBreedingHallLevel(){
+  const bred=safeNum(state.totalBred);
+  const lvls=CITY_BUILDINGS.breeding.levels;
+  let level=0;
+  for(let i=0;i<lvls.length;i++){if(bred>=lvls[i].target)level=i+1;}
+  return level;
+}
+function getBreedingHallRate(){
+  const lvl=getBreedingHallLevel();
+  if(!lvl)return 0;
+  const b=getCityBonuses();
+  return CITY_BUILDINGS.breeding.levels[lvl-1].gpH*b.breedingHallMult*b.allGoldMult;
+}
 const PVE_ACT2_STAGES=[
   // Act 2 — The Ascendancy (stages 1-9, needs 1-2 fully skilled immortals or 1 prestiged)
   {id:'a2_1', act:2,name:'The Veil Breaks',       desc:'Something ancient stirs. Your first Act 2 opponent is leagues beyond Act 1.',enemies:1,eLevel:2, gpR:5,  iconR:null,       boss:false},
@@ -401,6 +493,12 @@ const MILESTONE_TRACKS=[
    tiers:[{id:'mt_pve_1',name:'First Blood',target:1,gp:2},{id:'mt_pve_5',name:'Veteran Fighter',target:5,gp:3},{id:'mt_pve_10',name:'Act 1 Complete',target:10,gp:4},{id:'mt_pve_20',name:'Act 2 Complete',target:20,gp:5},{id:'mt_pve_30',name:'Act 3 Complete',target:30,gp:6},{id:'mt_pve_37',name:'Conqueror',target:37,gp:10}]},
   {id:'pve2',name:'PVE ACT 2',val:s=>(s.pveAct2Completed||[]).length,unit:'act 2 stages',
    tiers:[{id:'mt_pve2_1',name:'Ascendant',target:1,gp:3},{id:'mt_pve2_10',name:'First Reckoning',target:10,gp:5},{id:'mt_pve2_20',name:'Transcendent',target:20,gp:8},{id:'mt_pve2_33',name:'The Absolute',target:33,gp:15}]},
+  {id:'city_ri',name:'RESEARCH INSTITUTE',val:s=>safeNum(s.city?.riLevel),unit:'RI level',
+   tiers:[{id:'mt_ri_1',name:'The Institute Opens',target:1,gp:5},{id:'mt_ri_2',name:'Sacrifice Made',target:2,gp:15},{id:'mt_ri_3',name:'Absolute Dominion',target:3,gp:50}]},
+  {id:'city_skills',name:'RI SKILLS',val:s=>(s.city?.riSkills||[]).length,unit:'skills unlocked',
+   tiers:[{id:'mt_ris_1',name:'First Research',target:1,gp:2},{id:'mt_ris_5',name:'Developing',target:5,gp:3},{id:'mt_ris_10',name:'Invested',target:10,gp:5},{id:'mt_ris_20',name:'Scholar',target:20,gp:8},{id:'mt_ris_30',name:'Master Researcher',target:30,gp:12},{id:'mt_ris_40',name:'Omniscient',target:40,gp:20}]},
+  {id:'city_bh',name:'BREEDING HALL',val:s=>safeNum(s.totalBred)>=50000?4:safeNum(s.totalBred)>=30000?3:safeNum(s.totalBred)>=20000?2:safeNum(s.totalBred)>=10000?1:0,unit:'BH level',
+   tiers:[{id:'mt_bh_1',name:'Hall of Breeding',target:1,gp:5},{id:'mt_bh_2',name:'Industrial',target:2,gp:8},{id:'mt_bh_3',name:'Mass Production',target:3,gp:12},{id:'mt_bh_4',name:'The Eternal Engine',target:4,gp:20}]},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -461,14 +559,88 @@ function defaultState(){
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
     vault_predator_opens:0,vault_ancient_opens:0,vault_machine_opens:0,
     immortals:[],combatSlots:1,pveCompleted:[],pveAct2Completed:[],pvpWins:0,pvpLosses:0,combatLog:[],
+    city:{name:'',bannerColor:'',motto:'',riLevel:0,riSkills:[],sacrificedImmortalId:null,slots:[null,null,null,null,null,null,null,null],monumentIcons:[],lastGoldTick:null,goldBuffer:0},
     research:{labInterns:0,geneAnalysts:0,lineageArchivists:0,headOfResearch:false,automatedSequencer:false},
     upgrades:{popCap:0,mutation:0,traitAmp:0,breedYield:0,cullValue:0,selective:0,cullInsight:0,lineageMem:0,hybridVigor:0,adaptiveGenetics:0,autoBreeder:0,traitCapBoost:0,eliteMutation:0,deepArchive:0,secretDecoder:0},
   };
 }
 
 function getMaxPop(){return POP_CAP_TABLE[safeNum(state.upgrades?.popCap)]??20;}
-function getBreedGold(){return[1,3,6,12,25,50,100][safeNum(state.upgrades?.breedYield)]??1;}
-function getCullBonus(){return[0,3,7,15,30,60,120][safeNum(state.upgrades?.cullValue)]??0;}
+
+function getCityBonuses(){
+  const sk=state.city?.riSkills||[];
+  const b={
+    cullGoldMult:1,breedGoldMult:1,researchDiaMult:1,vaultCostMult:1,
+    breedingHallMult:1,allGoldMult:1,allDiaMult:1,
+    traitCapBonus:0,immortalHpBonus:0,immortalAtkBonus:0,immortalDefBonus:0,
+    immortalStatMult:1,pvpGpBonus:0,
+    milestoneGpBonus:0,secretMsGpBonus:0,perHundredGpBonus:0,
+    vaultDupRefundBonus:0,autoBreederSpeedMult:1,
+    prestigeSkillCostMult:1,prestigeCostMult:1,allGpMult:1,
+    scoreGenBonus:0,monumentIconBonus:0,allMsGpMult:1,researchRateMult:1,
+    bannerUnlocked:false,mottoUnlocked:false,
+  };
+  if(!sk.length)return b;
+  // ECONOMY
+  if(sk.includes('ri_e1'))b.cullGoldMult*=1.1;
+  if(sk.includes('ri_e2'))b.breedGoldMult*=1.1;
+  if(sk.includes('ri_e3'))b.researchDiaMult*=1.15;
+  if(sk.includes('ri_e4'))b.vaultCostMult*=0.9;
+  if(sk.includes('ri_e5'))b.breedingHallMult*=1.25;
+  if(sk.includes('ri_e6'))b.allGoldMult*=1.2;
+  if(sk.includes('ri_e7'))b.allDiaMult*=1.3;
+  if(sk.includes('ri_e8'))b.breedGoldMult*=2;
+  // GENETICS
+  if(sk.includes('ri_g4'))b.traitCapBonus+=3;
+  if(sk.includes('ri_g7'))b.traitCapBonus+=10;
+  // WARFARE
+  if(sk.includes('ri_w2'))b.immortalHpBonus+=100;
+  if(sk.includes('ri_w3'))b.immortalAtkBonus+=20;
+  if(sk.includes('ri_w4'))b.immortalDefBonus+=20;
+  if(sk.includes('ri_w5'))b.immortalStatMult*=1.15;
+  if(sk.includes('ri_w6'))b.pvpGpBonus+=5;
+  if(sk.includes('ri_w7'))b.immortalStatMult*=1.25;
+  if(sk.includes('ri_w8'))b.prestigeCostMult*=0.75;
+  // ARCANA
+  if(sk.includes('ri_a1'))b.milestoneGpBonus+=1;
+  if(sk.includes('ri_a2'))b.secretMsGpBonus+=2;
+  if(sk.includes('ri_a3'))b.perHundredGpBonus+=1;
+  if(sk.includes('ri_a4'))b.vaultDupRefundBonus+=0.1;
+  if(sk.includes('ri_a5'))b.bannerUnlocked=true;
+  if(sk.includes('ri_a6'))b.autoBreederSpeedMult*=1.25;
+  if(sk.includes('ri_a7'))b.prestigeSkillCostMult*=0.8;
+  if(sk.includes('ri_a8'))b.allGpMult*=1.3;
+  // LEGACY
+  if(sk.includes('ri_l1'))b.mottoUnlocked=true;
+  if(sk.includes('ri_l2'))b.scoreGenBonus=5;
+  if(sk.includes('ri_l3'))b.monumentIconBonus+=2;
+  if(sk.includes('ri_l4'))b.milestoneGpBonus+=1;
+  if(sk.includes('ri_l6'))b.researchRateMult*=1.25;
+  if(sk.includes('ri_l7'))b.allMsGpMult*=1.5;
+  // Absolute dominion: ×1.1 to everything
+  if(sk.includes('ri_l8')){
+    b.breedGoldMult*=1.1;b.cullGoldMult*=1.1;b.breedingHallMult*=1.1;
+    b.allGoldMult*=1.1;b.allGpMult*=1.1;b.allMsGpMult*=1.1;
+  }
+  return b;
+}
+
+function getCitySlots(){
+  if((state.pveAct2Completed||[]).length<PVE_ACT2_STAGES.length)return 0;
+  return Math.min(8,Math.max(1,Math.floor(safeNum(state.generation)/10000)));
+}
+function isCityUnlocked(){return getCitySlots()>0;}
+
+function getBreedGold(){
+  const base=[1,3,6,12,25,50,100][safeNum(state.upgrades?.breedYield)]??1;
+  const b=getCityBonuses();
+  return Math.floor(base*b.breedGoldMult*b.allGoldMult);
+}
+function getCullBonus(){
+  const base=[0,3,7,15,30,60,120][safeNum(state.upgrades?.cullValue)]??0;
+  const b=getCityBonuses();
+  return Math.floor(base*b.cullGoldMult*b.allGoldMult);
+}
 function getCullCount(){return[1,2,3,5,8,12][safeNum(state.upgrades?.cullInsight)]??1;}
 function getMutRate(){return[0.15,0.25,0.40,0.60,1.0,1.0][safeNum(state.upgrades?.mutation)]??0.15;}
 function getMutBonus(){return safeNum(state.upgrades?.mutation)>=6?2:1;}
@@ -476,8 +648,8 @@ function getAmpRate(){return[0,0.15,0.30,0.55,1.0,1.0][safeNum(state.upgrades?.t
 function getAmpBonus(){return safeNum(state.upgrades?.traitAmp)>=5;}
 function getMemRate(){return[0,0.05,0.12,0.25,0.40,0.60][safeNum(state.upgrades?.lineageMem)]??0;}
 function getMemBonus(){return[0,1,2][safeNum(state.upgrades?.deepArchive)]??0;}
-function getTraitCap(){return TRAIT_MAX+([0,5,10,20,35,55,75][safeNum(state.upgrades?.traitCapBoost)]??0);}
-function researchMult(){return(state.research?.headOfResearch?1.5:1)*(state.research?.automatedSequencer?2:1);}
+function getTraitCap(){return TRAIT_MAX+([0,5,10,20,35,55,75][safeNum(state.upgrades?.traitCapBoost)]??0)+getCityBonuses().traitCapBonus;}
+function researchMult(){return(state.research?.headOfResearch?1.5:1)*(state.research?.automatedSequencer?2:1)*getCityBonuses().researchRateMult;}
 function researchBreedYield(){return safeNum(state.research?.labInterns)*0.15*researchMult();}
 function researchCullYield(){return safeNum(state.research?.geneAnalysts)*0.4*researchMult();}
 function researchArchYield(){return safeNum(state.research?.lineageArchivists)*1.0*researchMult();}
@@ -489,11 +661,15 @@ function getMilestoneCounts(){
 }
 window.getMilestoneCounts=getMilestoneCounts;
 
-window.calcScore=()=>Math.floor(
-  (safeNum(state.highestFitness)*200+safeNum(state.generation)*10+
-   safeNum(state.totalBred)*3+safeNum(state.totalCulled)*5+
-   safeNum(state.totalGoldEarned)+safeNum(state.totalDiamondsEarned)*100)/100
-);
+window.calcScore=()=>{
+  const cb=getCityBonuses();
+  const genMult=10+cb.scoreGenBonus;
+  return Math.floor(
+    (safeNum(state.highestFitness)*200+safeNum(state.generation)*genMult+
+     safeNum(state.totalBred)*3+safeNum(state.totalCulled)*5+
+     safeNum(state.totalGoldEarned)+safeNum(state.totalDiamondsEarned)*100)/100
+  );
+};
 
 function migrateCrature(c){
   if(!c||typeof c!=='object')return null;
@@ -529,6 +705,14 @@ function sanitiseState(s){
     pveAct2Completed:Array.isArray(s.pveAct2Completed)?s.pveAct2Completed:[],
     pvpWins:safeNum(s.pvpWins),pvpLosses:safeNum(s.pvpLosses),
     combatLog:Array.isArray(s.combatLog)?s.combatLog:[],
+    city:{
+      name:s.city?.name||'',bannerColor:s.city?.bannerColor||'',motto:s.city?.motto||'',
+      riLevel:safeNum(s.city?.riLevel),riSkills:Array.isArray(s.city?.riSkills)?s.city.riSkills:[],
+      sacrificedImmortalId:s.city?.sacrificedImmortalId||null,
+      slots:Array.isArray(s.city?.slots)?s.city.slots:[null,null,null,null,null,null,null,null],
+      monumentIcons:Array.isArray(s.city?.monumentIcons)?s.city.monumentIcons:[],
+      lastGoldTick:s.city?.lastGoldTick||null,goldBuffer:safeNum(s.city?.goldBuffer),
+    },
     research:{labInterns:safeNum(s.research?.labInterns),geneAnalysts:safeNum(s.research?.geneAnalysts),lineageArchivists:safeNum(s.research?.lineageArchivists),headOfResearch:!!s.research?.headOfResearch,automatedSequencer:!!s.research?.automatedSequencer},
     upgrades:{popCap:safeNum(s.upgrades?.popCap),mutation:safeNum(s.upgrades?.mutation),traitAmp:safeNum(s.upgrades?.traitAmp),breedYield:safeNum(s.upgrades?.breedYield),cullValue:safeNum(s.upgrades?.cullValue),selective:safeNum(s.upgrades?.selective),cullInsight:safeNum(s.upgrades?.cullInsight),lineageMem:safeNum(s.upgrades?.lineageMem),hybridVigor:safeNum(s.upgrades?.hybridVigor),adaptiveGenetics:safeNum(s.upgrades?.adaptiveGenetics),autoBreeder:safeNum(s.upgrades?.autoBreeder),traitCapBoost:safeNum(s.upgrades?.traitCapBoost),eliteMutation:safeNum(s.upgrades?.eliteMutation),deepArchive:safeNum(s.upgrades?.deepArchive),secretDecoder:safeNum(s.upgrades?.secretDecoder)},
     population:(s.population||[]).map(migrateCrature).filter(Boolean),
@@ -591,6 +775,7 @@ window.applySaveData=(data)=>{
   state=sanitiseState({...defaultState(),...data});
   _gameReady=true;
   selectedForBreeding=[];rebuildBestEverTraits();migrateLegacyProgress();checkMilestones();
+  tickCityGold();
   startAutoBreeder();renderAll();
 };
 window.initNewGame=()=>{
@@ -676,10 +861,12 @@ function _doBreed(pA,pB,targeted=false,silent=false){
   if(state.population.length>safeNum(state.maxPopEver))state.maxPopEver=state.population.length;
   const ry=researchBreedYield();if(ry>0){state.diamondBuffer=safeNum(state.diamondBuffer)+ry;flushDiamondBuffer();}
   tickArchivists();checkEverBroke();
-  // 1 GP every 100 generations
+  // 1 GP (+city bonus) every 100 generations
   if(state.generation%100===0){
-    state.genePoints++;
-    addLog(`🧪 Generation ${fmt(state.generation)} — +1 Gene Point`,'gp');
+    const cb=getCityBonuses();
+    const gp=Math.floor((1+cb.perHundredGpBonus)*cb.allGpMult);
+    state.genePoints+=gp;
+    addLog(`🧪 Generation ${fmt(state.generation)} — +${gp} Gene Point${gp!==1?'s':''}`,'gp');
   }
   if(silent){
     autoBredTotal++;state.autoOnlyBreeds=safeNum(state.autoOnlyBreeds)+1;
@@ -699,6 +886,7 @@ function _doBreed(pA,pB,targeted=false,silent=false){
     if(currentTab==='milestones')renderMilestones();
     if(currentTab==='vault')renderGeneVault();
     if(currentTab==='combat')renderCombat();
+    if(currentTab==='city')renderCity();
   } else {
     renderAll();
   }
@@ -952,6 +1140,143 @@ window._pvpFight=(key)=>{
   if(!t){addLog('Target not found — refresh the leaderboard.','warn');return;}
   window.openPvpModal(t.uid,t.username);
 };
+// ═══════════════════════════════════════════════════════════
+//  CITY ACTIONS
+// ═══════════════════════════════════════════════════════════
+
+// Tick gold from Breeding Hall (called on load + on save)
+function tickCityGold(){
+  if(!isCityUnlocked())return;
+  const rate=getBreedingHallRate(); // gold per hour
+  if(!rate)return;
+  const now=Date.now();
+  const last=state.city.lastGoldTick?new Date(state.city.lastGoldTick).getTime():now;
+  const hoursElapsed=Math.min((now-last)/3600000, 24); // cap at 24h offline
+  if(hoursElapsed<0.01)return;
+  const earned=Math.floor(rate*hoursElapsed);
+  if(earned>0){
+    state.gold+=earned;state.totalGoldEarned+=earned;
+    addLog(`🏗️ Breeding Hall produced ${fmt(earned)} gold (${fmt1(hoursElapsed)}h).`,'highlight');
+  }
+  state.city.lastGoldTick=new Date(now).toISOString();
+}
+window.tickCityGold=tickCityGold;
+
+// Build a slot
+window.citySetSlot=(slotIdx,buildingId)=>{
+  if(!isCityUnlocked())return;
+  const slots=getCitySlots();
+  if(slotIdx>=slots)return addLog('That slot is not yet unlocked.','warn');
+  if(slotIdx===0)return addLog('Slot 0 is reserved for the Research Institute.','warn');
+  if(!CITY_BUILDINGS[buildingId])return addLog('Unknown building.','warn');
+  state.city.slots[slotIdx]=buildingId;
+  addLog(`🏙️ Slot ${slotIdx+1}: ${CITY_BUILDINGS[buildingId].name} placed.`,'highlight');
+  renderCity();
+};
+
+// Research Institute: build (riLevel 0 → 1)
+window.cityBuildRI=()=>{
+  if(!isCityUnlocked())return;
+  if(state.city.riLevel>=1)return addLog('Research Institute already built.','warn');
+  state.city.riLevel=1;
+  state.city.slots[0]='research';
+  addLog('🏛️ Research Institute built! Skill tree unlocked.','highlight');
+  checkMilestones();renderCity();
+};
+
+// RI Level 2: sacrifice a completely maxed immortal
+window.cityUpgradeRI2=(immortalId)=>{
+  if(state.city.riLevel>=2)return addLog('Already at Level 2.','warn');
+  if(state.city.riLevel<1)return addLog('Build the Research Institute first.','warn');
+  const im=(state.immortals||[]).find(x=>x.id===immortalId);
+  if(!im)return addLog('Immortal not found.','warn');
+  // Check fully maxed: all 5 base tiers per branch + all 5 prestige tiers per branch
+  const allBase=IM_SKILLS.map(s=>s.id);
+  const allPrestige=PRESTIGE_BRANCHES.flatMap(b=>b.skills.map(s=>s.id));
+  const hasAllBase=allBase.every(id=>(im.skills||[]).includes(id)||(IM_SKILL_MAP[id]?.blocked_by||[]).some(bid=>(im.skills||[]).includes(bid)));
+  const hasAllPrestige=im.prestiged&&allPrestige.every(id=>(im.prestigeSkills||[]).includes(id));
+  // "All tiers of all prestiges" — check all non-blocked base skills + all prestige skills
+  const baseOwned=IM_BRANCHES.every(branch=>{
+    const max=branch.skills[branch.skills.length-1].id;
+    const mid=branch.skills[Math.floor(branch.skills.length/2)-1]?.id;
+    return (im.skills||[]).includes(max)||(im.skills||[]).includes(mid);
+  });
+  if(!im.prestiged)return addLog(`${im.name} must be prestiged first.`,'warn');
+  if(!allPrestige.every(id=>(im.prestigeSkills||[]).includes(id)))return addLog(`${im.name} must have ALL prestige skills unlocked.`,'warn');
+  if(!confirm(`Sacrifice ${im.name} to upgrade the Research Institute to Level 2? This is permanent.`))return;
+  state.city.sacrificedImmortalId=im.id;
+  state.immortals=state.immortals.filter(x=>x.id!==immortalId);
+  state.city.riLevel=2;
+  addLog(`🏛️ ${im.name} sacrificed. Research Institute reached Level 2!`,'highlight');
+  checkMilestones();renderCity();
+};
+
+// RI Level 3: all milestones complete
+window.cityUpgradeRI3=()=>{
+  if(state.city.riLevel>=3)return addLog('Already at Level 3.','warn');
+  if(state.city.riLevel<2)return addLog('Upgrade to Level 2 first.','warn');
+  const ms=getMilestoneCounts();
+  if(ms.done<ms.total)return addLog(`Complete all ${ms.total} milestones first (${ms.done}/${ms.total}).`,'warn');
+  state.city.riLevel=3;
+  addLog('🏛️ All milestones completed. Research Institute reached Level 3 — ABSOLUTE DOMINION!','highlight');
+  checkMilestones();renderCity();
+};
+
+// Buy RI skill
+window.buyRISkill=(skillId)=>{
+  if(!isCityUnlocked())return;
+  const skill=RI_SKILL_MAP[skillId];if(!skill)return;
+  if((state.city.riSkills||[]).includes(skillId))return addLog('Already unlocked.','warn');
+  if(skill.riLevel>state.city.riLevel)return addLog(`Requires Research Institute Level ${skill.riLevel}.`,'warn');
+  const branch=RI_BRANCHES.find(b=>b.id===skill.branch);
+  const tierIdx=branch.skills.findIndex(s=>s.id===skillId);
+  if(tierIdx>0&&!(state.city.riSkills||[]).includes(branch.skills[tierIdx-1].id))
+    return addLog('Unlock previous tier first.','warn');
+  if(state.genePoints<skill.cost)return addLog(`Need ${skill.cost} 🧪 — have ${fmt(state.genePoints)}.`,'warn');
+  state.genePoints-=skill.cost;
+  state.city.riSkills=[...(state.city.riSkills||[]),skillId];
+  addLog(`🏛️ RI: ${skill.name} — ${skill.effect}`,'gp');
+  checkMilestones();renderCity();
+};
+
+// Set city name
+window.saveCityName=()=>{
+  const val=(document.getElementById('city-name-input')?.value||'').trim();
+  if(!val)return;
+  if(val.length>20)return addLog('City name max 20 chars.','warn');
+  state.city.name=val;
+  addLog(`🏙️ City renamed to "${val}".`,'highlight');
+  renderCity();
+};
+
+// Set city banner colour
+window.saveCityBanner=()=>{
+  const val=document.getElementById('city-banner-input')?.value||'#39ff14';
+  state.city.bannerColor=val;
+  addLog('🏙️ Banner colour updated.','highlight');
+  renderCity();
+};
+
+// Set city motto
+window.saveCityMotto=()=>{
+  const val=(document.getElementById('city-motto-input')?.value||'').trim();
+  if(val.length>60)return addLog('Motto max 60 chars.','warn');
+  state.city.motto=val;
+  addLog('🏙️ Motto updated.','highlight');
+  renderCity();
+};
+
+// Toggle monument icon
+window.toggleMonumentIcon=(icon)=>{
+  const cb=getCityBonuses();
+  const maxSlots=3+cb.monumentIconBonus;
+  const cur=state.city.monumentIcons||[];
+  if(cur.includes(icon)){state.city.monumentIcons=cur.filter(x=>x!==icon);}
+  else if(cur.length<maxSlots){state.city.monumentIcons=[...cur,icon];}
+  else return addLog(`Monument has ${maxSlots} slots. Remove one first.`,'warn');
+  renderCity();
+};
+
 window.openPvpModal=(targetUid,targetName)=>{
   try{
   if(!(state.immortals||[]).length)return addLog('Need at least one immortal to challenge.','warn');
@@ -1043,23 +1368,25 @@ function checkEverBroke(){if(!state.everBroke&&state.gold===0&&state.totalGoldEa
 //  MILESTONES
 // ═══════════════════════════════════════════════════════════
 function checkMilestones(){
+  const cb=getCityBonuses();
   MILESTONE_TRACKS.forEach(track=>{
     const val=track.val(state);
     track.tiers.forEach(tier=>{
       if(state.completedMilestones.includes(tier.id)||val<tier.target)return;
       state.completedMilestones.push(tier.id);state.milestoneDiamondsAwarded.push(tier.id);
-      const gp=tier.gp||1;
+      const gp=Math.floor((tier.gp||1)+cb.milestoneGpBonus)*cb.allGpMult*cb.allMsGpMult;
+      const gpFinal=Math.max(0,Math.floor(gp));
       const dia=tier.dia||1;
-      if(gp>0)state.genePoints+=gp;
+      if(gpFinal>0)state.genePoints+=gpFinal;
       if(dia>0){state.diamonds+=dia;state.totalDiamondsEarned+=dia;}
-      const reward=(dia>0?`+${dia}💎 `:'')+( gp>0?`+${gp}🧪`:'');
+      const reward=(dia>0?`+${dia}💎 `:'')+( gpFinal>0?`+${gpFinal}🧪`:'');
       addLog(`💎 [${track.name}]: "${tier.name}" ${reward}`,'diamond');
     });
   });
   SECRET_MILESTONES.forEach(m=>{
     if(state.completedMilestones.includes(m.id)||!m.check(state))return;
     state.completedMilestones.push(m.id);state.milestoneDiamondsAwarded.push(m.id);
-    const gp=m.gp||5;
+    const gp=Math.floor(((m.gp||5)+cb.secretMsGpBonus)*cb.allGpMult);
     const dia=m.dia||3;
     state.genePoints+=gp;
     if(dia>0){state.diamonds+=dia;state.totalDiamondsEarned+=dia;}
@@ -1085,6 +1412,7 @@ function renderAll(){
   if(currentTab==='milestones')renderMilestones();
   if(currentTab==='vault')renderGeneVault();
   if(currentTab==='combat')renderCombat();
+  if(currentTab==='city')renderCity();
 }
 
 function renderStats(){
@@ -1550,6 +1878,168 @@ function renderGeneVault(){
   c.innerHTML=html;
 }
 
+function renderCity(){
+  const c=document.getElementById('city-container');if(!c)return;
+  const act2Done=(state.pveAct2Completed||[]).length>=PVE_ACT2_STAGES.length;
+  if(!act2Done){
+    c.innerHTML=`<div class="combat-locked" style="border-color:var(--score)">
+      🏙️ YOUR CITY<br><br>
+      Complete all 33 stages of Act 2 to unlock your city.<br>
+      <span style="color:var(--muted);font-size:11px">Act 2 progress: ${(state.pveAct2Completed||[]).length} / ${PVE_ACT2_STAGES.length}</span>
+    </div>`;
+    return;
+  }
+  tickCityGold();
+  const slots=getCitySlots();
+  const cb=getCityBonuses();
+  const city=state.city;
+  const bhLevel=getBreedingHallLevel();
+  const bhRate=getBreedingHallRate();
+
+  let html='';
+  // Header
+  const banner=city.bannerColor||'var(--score)';
+  html+=`<div style="border-left:4px solid ${banner};padding-left:16px;margin-bottom:24px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <span style="color:${banner};font-size:20px;letter-spacing:2px">${city.name||'Unnamed City'}</span>
+      ${cb.bannerUnlocked?`<button onclick="(()=>{const d=document.getElementById('city-edit-panel');d.classList.toggle('hidden');})()" style="width:auto;font-size:10px;padding:3px 10px;margin:0;border-color:var(--muted);color:var(--muted)">[ EDIT ]</button>`:''}
+    </div>
+    ${city.motto?`<p style="color:var(--muted);font-size:11px;margin-top:4px;font-style:italic">"${esc(city.motto)}"</p>`:''}
+    <p style="color:var(--muted);font-size:10px;margin-top:6px">Slots: ${slots} / 8 &nbsp;|&nbsp; Unlocks 1 per 10,000 generations</p>
+  </div>`;
+
+  // Edit panel
+  html+=`<div id="city-edit-panel" class="hidden" style="border:1px solid var(--border);background:var(--surface);padding:14px;margin-bottom:20px">
+    <p style="color:var(--text);font-size:10px;letter-spacing:2px;margin-bottom:12px">// EDIT CITY</p>
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+      <label style="color:var(--muted);font-size:11px;width:80px">Name:</label>
+      <input id="city-name-input" value="${esc(city.name)}" placeholder="City name" style="flex:1;min-width:120px" maxlength="20" />
+      <button onclick="saveCityName()" style="width:auto;padding:6px 12px;margin:0;font-size:11px">[ SAVE ]</button>
+    </div>
+    ${cb.bannerUnlocked?`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+      <label style="color:var(--muted);font-size:11px;width:80px">Banner:</label>
+      <input type="color" id="city-banner-input" value="${city.bannerColor||'#39ff14'}" style="height:32px;width:60px;border:1px solid var(--border);background:none;cursor:pointer" />
+      <button onclick="saveCityBanner()" style="width:auto;padding:6px 12px;margin:0;font-size:11px">[ SAVE ]</button>
+    </div>`:''}
+    ${cb.mottoUnlocked?`<div style="display:flex;gap:8px;margin-bottom:0;align-items:center;flex-wrap:wrap">
+      <label style="color:var(--muted);font-size:11px;width:80px">Motto:</label>
+      <input id="city-motto-input" value="${esc(city.motto)}" placeholder="City motto" style="flex:1;min-width:120px" maxlength="60" />
+      <button onclick="saveCityMotto()" style="width:auto;padding:6px 12px;margin:0;font-size:11px">[ SAVE ]</button>
+    </div>`:''}
+  </div>`;
+
+  // Slot grid
+  html+=`<p style="color:var(--text);font-size:10px;letter-spacing:3px;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid var(--border)">// CITY SLOTS</p>`;
+  html+=`<div class="city-slots">`;
+  for(let i=0;i<8;i++){
+    const unlocked=i<slots;
+    const isRI=i===0;
+    const slotBuilding=city.slots[i];
+    if(!unlocked){
+      const genNeeded=(i+1)*10000;
+      html+=`<div class="city-slot city-slot-locked"><div style="color:var(--border);font-size:11px">🔒 LOCKED</div><div style="color:var(--border);font-size:9px;margin-top:4px">${fmt(genNeeded)} generations</div></div>`;
+    } else if(isRI){
+      if(!slotBuilding){
+        html+=`<div class="city-slot city-slot-empty"><div style="font-size:22px;margin-bottom:8px">🏛️</div><div style="color:var(--text);font-size:12px;margin-bottom:6px">Research Institute</div><div style="color:var(--muted);font-size:10px;margin-bottom:10px">The heart of your city.</div><button onclick="cityBuildRI()" style="width:auto;padding:6px 14px;margin:0;font-size:11px;border-color:var(--score);color:var(--score)">[ BUILD ]</button></div>`;
+      } else {
+        html+=`<div class="city-slot city-slot-ri"><div style="font-size:22px;margin-bottom:4px">🏛️</div><div style="color:var(--score);font-size:12px;letter-spacing:1px">RESEARCH INSTITUTE</div><div style="color:var(--muted);font-size:10px;margin-top:4px">Level ${city.riLevel} / 3</div><div style="color:var(--gp);font-size:10px;margin-top:4px">${(city.riSkills||[]).length} / 40 skills</div></div>`;
+      }
+    } else {
+      if(!slotBuilding){
+        html+=`<div class="city-slot city-slot-empty"><div style="color:var(--muted);font-size:11px;margin-bottom:8px">Empty slot</div><select id="slot-sel-${i}" style="font-size:10px;margin-bottom:8px;width:100%"><option value="">— choose —</option><option value="breeding">🏗️ Breeding Hall</option><option value="monument">🗿 Monument</option></select><button onclick="(()=>{const v=document.getElementById('slot-sel-${i}').value;if(v)citySetSlot(${i},v);})()" style="width:auto;padding:5px 12px;margin:0;font-size:10px">[ BUILD ]</button></div>`;
+      } else if(slotBuilding==='breeding'){
+        html+=`<div class="city-slot city-slot-bh"><div style="font-size:22px;margin-bottom:4px">🏗️</div><div style="color:var(--gold);font-size:12px;letter-spacing:1px">BREEDING HALL</div><div style="color:var(--muted);font-size:10px;margin-top:4px">Level ${bhLevel} / 4</div><div style="color:var(--gold);font-size:10px;margin-top:4px">${bhLevel?fmt(bhRate)+' gold/hr':'Not yet active'}</div></div>`;
+      } else if(slotBuilding==='monument'){
+        const mIcons=city.monumentIcons||[];
+        const maxM=3+cb.monumentIconBonus;
+        html+=`<div class="city-slot city-slot-monument"><div style="font-size:22px;margin-bottom:4px">🗿</div><div style="color:var(--diamond);font-size:12px;letter-spacing:1px">MONUMENT</div><div style="font-size:18px;margin-top:6px;letter-spacing:4px">${mIcons.join('')||'—'}</div><div style="color:var(--muted);font-size:9px;margin-top:4px">${mIcons.length}/${maxM} icons</div></div>`;
+      }
+    }
+  }
+  html+=`</div>`;
+
+  // Research Institute full panel
+  if(city.slots[0]==='research'){
+    html+=`<div style="margin-top:28px"><p style="color:var(--score);font-size:10px;letter-spacing:3px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #1a0a2a">// RESEARCH INSTITUTE — LEVEL ${city.riLevel} / 3</p>`;
+
+    // RI level upgrade buttons
+    if(city.riLevel<2){
+      const mortals=state.immortals||[];
+      const allPrestigeIds=PRESTIGE_BRANCHES.flatMap(b=>b.skills.map(s=>s.id));
+      const eligible=mortals.filter(im=>im.prestiged&&allPrestigeIds.every(id=>(im.prestigeSkills||[]).includes(id)));
+      html+=`<div style="border:1px solid #2a1a3a;background:#0a0508;padding:14px;margin-bottom:20px">
+        <p style="color:var(--score);font-size:11px;margin-bottom:8px">Upgrade to Level 2</p>
+        <p style="color:var(--muted);font-size:11px;line-height:1.6;margin-bottom:10px">Sacrifice a fully maxed + fully prestiged immortal (all base + all prestige skills).</p>
+        ${eligible.length?eligible.map(im=>`<button onclick="cityUpgradeRI2('${im.id}')" style="width:auto;padding:5px 12px;margin:0 6px 4px 0;font-size:11px;border-color:var(--score);color:var(--score)">[ Sacrifice ${esc(im.name)} ]</button>`).join(''):'<p style="color:var(--red);font-size:11px">No eligible immortals — need fully maxed + fully prestiged.</p>'}
+      </div>`;
+    } else if(city.riLevel<3){
+      const ms=getMilestoneCounts();
+      const canL3=ms.done>=ms.total;
+      html+=`<div style="border:1px solid #2a1a3a;background:#0a0508;padding:14px;margin-bottom:20px">
+        <p style="color:var(--score);font-size:11px;margin-bottom:8px">Upgrade to Level 3</p>
+        <p style="color:var(--muted);font-size:11px;line-height:1.6;margin-bottom:10px">Complete every single milestone: <strong style="color:${canL3?'var(--green)':'var(--red)'}">${ms.done} / ${ms.total}</strong></p>
+        <button onclick="cityUpgradeRI3()" style="width:auto;padding:6px 14px;margin:0;font-size:11px;${canL3?'border-color:var(--score);color:var(--score)':'opacity:.4;cursor:not-allowed'}">[ UPGRADE TO LEVEL 3 ]</button>
+      </div>`;
+    }
+
+    // Skill tree
+    html+=`<p style="color:var(--gp);font-size:10px;letter-spacing:2px;margin-bottom:14px">${fmt(state.genePoints)} 🧪 available</p>`;
+    html+=`<div class="im-skill-tree" style="grid-template-columns:repeat(5,1fr)">`;
+    RI_BRANCHES.forEach(branch=>{
+      html+=`<div class="im-branch">
+        <div class="im-branch-title" style="color:${branch.color}">${branch.name}</div>`;
+      branch.skills.forEach((skill,idx)=>{
+        const owned=(city.riSkills||[]).includes(skill.id);
+        const prevOwned=idx===0||(city.riSkills||[]).includes(branch.skills[idx-1].id);
+        const levelLocked=skill.riLevel>city.riLevel;
+        const isLocked=!owned&&(!prevOwned||levelLocked);
+        const canBuy=!owned&&prevOwned&&!levelLocked&&state.genePoints>=skill.cost;
+        const nodeCls=owned?'sk-owned':levelLocked?'sk-blocked':isLocked?'sk-locked':'sk-available';
+        if(idx>0) html+=`<div class="im-connector ${owned?'conn-lit':''}" style="color:${owned?branch.color:'var(--border)'};text-align:center;font-size:9px">↓</div>`;
+        html+=`<div class="im-skill-node ${nodeCls}" style="${owned?`border-color:${branch.color};background:#0a0505`:''}" ${!owned&&!isLocked?`onclick="buyRISkill('${skill.id}')" title="${skill.effect}"`:''}>
+          <div class="im-sn-name" style="${owned?`color:${branch.color}`:''}"> ${skill.name}</div>
+          <div class="im-sn-effect">${skill.effect}</div>`;
+        if(owned) html+=`<div class="im-sn-cost owned" style="color:${branch.color}">✓ ACTIVE</div>`;
+        else if(levelLocked) html+=`<div class="im-sn-cost blocked">🔒 RI Level ${skill.riLevel}</div>`;
+        else if(isLocked) html+=`<div class="im-sn-cost locked">🔒 Prev tier</div>`;
+        else html+=`<div class="im-sn-cost ${canBuy?'afford':'noafford'}">${skill.cost} 🧪</div>`;
+        html+=`</div>`;
+      });
+      html+=`</div>`;
+    });
+    html+=`</div></div>`;
+  }
+
+  // Monument icon picker
+  if((city.slots||[]).includes('monument')){
+    const maxM=3+cb.monumentIconBonus;
+    html+=`<div style="margin-top:28px"><p style="color:var(--diamond);font-size:10px;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--dimblu)">// MONUMENT — CHOOSE ICONS (${(city.monumentIcons||[]).length}/${maxM})</p>`;
+    html+=`<div class="vault-icon-grid">`;
+    [...new Set(state.ownedIcons||[])].forEach(icon=>{
+      const sel=(city.monumentIcons||[]).includes(icon);
+      html+=`<div class="vault-icon-cell ${sel?'selected':''}" onclick="toggleMonumentIcon('${icon}')">${icon}</div>`;
+    });
+    html+=`</div></div>`;
+  }
+
+  // Breeding Hall status
+  if((city.slots||[]).includes('breeding')){
+    html+=`<div style="margin-top:28px"><p style="color:var(--gold);font-size:10px;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #2a1a00">// BREEDING HALL</p>`;
+    CITY_BUILDINGS.breeding.levels.forEach((lvl,i)=>{
+      const active=bhLevel>i;const current=bhLevel===i+1;
+      html+=`<div style="border:1px solid ${active?'var(--dimgreen)':current?'var(--gold)':'var(--border)'};background:${active?'#060e06':'var(--surface)'};padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="color:${active?'var(--green)':current?'var(--gold)':'var(--text)'};font-size:12px">${lvl.label}</div><div style="color:var(--muted);font-size:10px">${lvl.desc}</div></div>
+        <div style="color:${active?'var(--green)':'var(--muted)'};font-size:11px">${active?'✓ ACTIVE':fmt(lvl.target)+' breeds needed'}</div>
+      </div>`;
+    });
+    if(bhRate>0)html+=`<p style="color:var(--gold);font-size:11px;margin-top:8px">Current rate: ${fmt(bhRate)} gold/hour</p>`;
+    html+=`</div>`;
+  }
+
+  c.innerHTML=html;
+}
+window.renderCity=renderCity;
+
 window.renderLeaderboard=(entries,currentUid)=>{
   const c=document.getElementById('leaderboard-container');if(!c)return;
   if(window.isGuest){
@@ -1608,6 +2098,7 @@ window.switchTab=(tab)=>{
   if(tab==='vault')renderGeneVault();
   if(tab==='combat')renderCombat();
   if(tab==='leaderboard')window.refreshLeaderboard?.();
+  if(tab==='city'){tickCityGold();renderCity();}
 };
 
 window.addLog=(text,type='')=>{
