@@ -398,4 +398,21 @@ h2:first-child { margin-top:0; }
 
 .hidden { display:none !important; }
 
+.h/* ── CITY ───────────────────────────────────────────── */
+.city-slots {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:10px; margin-bottom:20px;
+}
+.city-slot {
+  border:1px solid var(--border); background:var(--surface);
+  padding:16px 14px; min-height:110px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center;
+}
+.city-slot-locked  { opacity:.35; }
+.city-slot-empty   { border-style:dashed; }
+.city-slot-ri      { border-color:var(--score); background:#0a0510; }
+.city-slot-bh      { border-color:var(--gold);  background:#0a0900; }
+.city-slot-monument{ border-color:var(--diamond);background:#00090f; }
 .hidden { display:none !important; }
