@@ -1400,11 +1400,15 @@ window.cityUpgradeRI2=(immortalId)=>{
 window.cityUpgradeRI3=()=>{
   if(state.city.riLevel>=3)return addLog('Already at Level 3.','warn');
   if(state.city.riLevel<2)return addLog('Upgrade to Level 2 first.','warn');
-  const ms=getMilestoneCounts();
-  if(ms.done<ms.total)return addLog(`Complete all ${ms.total} milestones first (${ms.done}/${ms.total}).`,'warn');
+  // Exclude the RI Level 3 milestone itself (mt_ri_3) — it's awarded after upgrading, not before
+  const EXCLUDED=['mt_ri_3'];
+  const allIds=[...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)].filter(id=>!EXCLUDED.includes(id));
+  const done=allIds.filter(id=>state.completedMilestones.includes(id)).length;
+  const total=allIds.length;
+  if(done<total)return addLog(`Complete all milestones first — ${done}/${total} done (excluding RI Lv3 itself).`,'warn');
   state.city.riLevel=3;
   addLog('🏛️ All milestones completed. Research Institute reached Level 3 — ABSOLUTE DOMINION!','highlight');
-  checkMilestones();renderCity();
+  checkMilestones();renderStats();renderCity();
 };
 
 // Buy RI skill
@@ -2340,10 +2344,14 @@ function renderCity(){
         ${eligible.length?eligible.map(im=>`<button onclick="cityUpgradeRI2('${im.id}')" style="width:auto;padding:4px 12px;margin:0 6px 4px 0;font-size:11px;border-color:var(--score);color:var(--score)">[ Sacrifice ${esc(im.name)} ]</button>`).join(''):`<p style="color:var(--red);font-size:11px">No eligible immortals — need fully maxed + fully prestiged.</p>`}
       </div>`;
     } else if(city.riLevel<3){
-      const ms=getMilestoneCounts();const canL3=ms.done>=ms.total;
+      const EXCL3=['mt_ri_3'];
+      const allIds3=[...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)].filter(id=>!EXCL3.includes(id));
+      const done3=allIds3.filter(id=>state.completedMilestones.includes(id)).length;
+      const total3=allIds3.length;
+      const canL3=done3>=total3;
       html+=`<div style="border:1px solid #2a1a3a;background:#0a0508;padding:12px;margin-bottom:16px">
         <p style="color:var(--score);font-size:11px;margin-bottom:6px">Upgrade to Level 3</p>
-        <p style="color:var(--muted);font-size:11px;margin-bottom:8px">Complete every milestone: <strong style="color:${canL3?'var(--green)':'var(--red)'}">${ms.done} / ${ms.total}</strong></p>
+        <p style="color:var(--muted);font-size:11px;margin-bottom:8px">Complete every milestone (excl. RI Lv3 itself): <strong style="color:${canL3?'var(--green)':'var(--red)'}">${done3} / ${total3}</strong></p>
         <button onclick="cityUpgradeRI3()" style="width:auto;padding:5px 14px;margin:0;font-size:11px;${canL3?'border-color:var(--score);color:var(--score)':'opacity:.4;cursor:not-allowed'}">[ UPGRADE TO LEVEL 3 ]</button>
       </div>`;
     }
