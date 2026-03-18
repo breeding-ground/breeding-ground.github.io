@@ -101,6 +101,7 @@ async function _saveFirebase() {
         selectedIcon:   data.selectedIcon  || null,
         milestoneDone:  ms.done,
         milestoneTotal: ms.total,
+        hasCityData:    !!(data.city?.slots?.some(s=>s)),
         rawFitness:             data.highestFitness      || 0,
         rawGeneration:          data.generation          || 1,
         rawTotalBred:           data.totalBred           || 0,
@@ -409,3 +410,46 @@ function friendlyErr(code) {
   };
   return map[code] || `Error: ${code}`;
 }
+
+// ── VISIT CITY ────────────────────────────────────────────
+window._visitCityFromAuth = async (uid, username) => {
+  const modal = document.getElementById('visit-city-modal');
+  const titleEl = document.getElementById('visit-city-title');
+  const bodyEl  = document.getElementById('visit-city-body');
+  if (!modal || !titleEl || !bodyEl) return;
+  titleEl.textContent = `🏙️ ${username}'s City`;
+  bodyEl.innerHTML = '<p style="color:var(--muted);font-size:12px">Loading…</p>';
+  modal.classList.remove('hidden');
+  try {
+    const snap = await getDoc(doc(db, 'saves', uid));
+    if (!snap.exists()) { bodyEl.innerHTML = '<p style="color:var(--muted)">This player has no city yet.</p>'; return; }
+    const data = snap.data();
+    const city = data.city || {};
+    const slots = city.slots || [];
+    const banner = city.bannerColor || 'var(--score)';
+    const BLDG = { breeding:'🏗️ Breeding Hall', culling:'⚗️ Culling Hall', monument:'🗿 Monument', research:'🏛️ Research Institute' };
+    let html = `<div style="border-left:3px solid ${banner};padding-left:12px;margin-bottom:16px">`;
+    if (city.name) html += `<div style="color:${banner};font-size:16px;margin-bottom:4px">${esc(city.name)}</div>`;
+    if (city.motto) html += `<div style="color:var(--muted);font-size:11px;font-style:italic">"${esc(city.motto)}"</div>`;
+    html += `</div>`;
+    const filledSlots = slots.filter(Boolean);
+    if (!filledSlots.length) { html += '<p style="color:var(--muted);font-size:12px">This city is still under construction.</p>'; }
+    else {
+      html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:16px">`;
+      slots.forEach((s, i) => {
+        if (!s) return;
+        const isRI = s === 'research';
+        const label = BLDG[s] || s;
+        const col = isRI ? 'var(--score)' : s === 'breeding' ? 'var(--gold)' : s === 'culling' ? 'var(--diamond)' : 'var(--diamond)';
+        html += `<div style="border:1px solid ${col};background:var(--surface);padding:10px;text-align:center;border-radius:50%;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:20px">${label.split(' ')[0]}</div>
+          <div style="color:${col};font-size:9px;margin-top:4px;letter-spacing:1px">${label.split(' ').slice(1).join(' ')}</div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    const mIcons = city.monumentIcons || [];
+    if (mIcons.length) html += `<p style="color:var(--muted);font-size:11px;margin-bottom:4px">Monument:</p><div style="font-size:24px;letter-spacing:6px">${mIcons.join('')}</div>`;
+    bodyEl.innerHTML = html;
+  } catch(e) { console.error(e); bodyEl.innerHTML = '<p style="color:var(--red)">Failed to load city.</p>'; }
+};
