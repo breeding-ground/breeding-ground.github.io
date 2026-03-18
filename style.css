@@ -262,7 +262,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); displ
 .ms-cat-title { font-size:10px; letter-spacing:3px; color:var(--dimgreen); margin:24px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--border); }
 .ms-cat-title:first-of-type { margin-top:0; }
 .ms-cat-title.secret-title { color:var(--secret); }
-.track-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; margin-bottom:10px; }
+.track-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; margin-bottom:10px; }
 .track-card { border:1px solid var(--border); background:var(--surface); padding:14px 16px; border-left:3px solid var(--border); }
 .track-card.tc-active   { border-left-color:var(--dimgreen); }
 .track-card.tc-complete { border-left-color:var(--green); background:#060e06; }
