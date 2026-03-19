@@ -655,7 +655,7 @@ function defaultState(){
     everBroke:false,culledOwnRecord:false,usedLegendaryStock:false,hasSetUsername:false,
     bredBeforeFirstCull:0,firstCullDone:false,culledFromThree:false,
     triedUsernameBG:false,savedAtMidnight:false,sameParentCount:0,lastParentPair:null,
-    breedCapHits:0,lbRefreshCount:0,autoOnlyBreeds:0,hasDisposedImmortal:false,namedImmortalDarwin:false,scorchEarth:false,disposedNames:[],
+    breedCapHits:0,lbRefreshCount:0,autoOnlyBreeds:0,hasDisposedImmortal:false,namedImmortalDarwin:false,scorchEarth:false,disposedNames:[],maxImmortalsEver:0,
     diamondBuffer:0,lastArchivistGen:1,totalResearchDiamondsEarned:0,
     totalVaultOpens:0,ownedIcons:[],selectedIcon:null,
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
@@ -794,7 +794,7 @@ function sanitiseState(s){
     triedUsernameBG:!!s.triedUsernameBG,savedAtMidnight:!!s.savedAtMidnight,
     sameParentCount:safeNum(s.sameParentCount),lastParentPair:s.lastParentPair||null,
     breedCapHits:safeNum(s.breedCapHits),lbRefreshCount:safeNum(s.lbRefreshCount),autoOnlyBreeds:safeNum(s.autoOnlyBreeds),
-    hasDisposedImmortal:!!s.hasDisposedImmortal,namedImmortalDarwin:!!s.namedImmortalDarwin,scorchEarth:!!s.scorchEarth,disposedNames:Array.isArray(s.disposedNames)?s.disposedNames:[],
+    hasDisposedImmortal:!!s.hasDisposedImmortal,namedImmortalDarwin:!!s.namedImmortalDarwin,scorchEarth:!!s.scorchEarth,disposedNames:Array.isArray(s.disposedNames)?s.disposedNames:[],maxImmortalsEver:safeNum(s.maxImmortalsEver),
     diamondBuffer:safeNum(s.diamondBuffer),lastArchivistGen:safeNum(s.lastArchivistGen,1),
     totalResearchDiamondsEarned:safeNum(s.totalResearchDiamondsEarned),totalVaultOpens:safeNum(s.totalVaultOpens),
     ownedIcons:[...new Set(Array.isArray(s.ownedIcons)?s.ownedIcons:[])],selectedIcon:s.selectedIcon||null,
@@ -892,6 +892,8 @@ window.getSaveData=()=>sanitiseState(state);
 window.applySaveData=(data)=>{
   state=sanitiseState({...defaultState(),...data});
   _gameReady=true;
+  // seed maxImmortalsEver for saves that predate this field
+  if(!state.maxImmortalsEver) state.maxImmortalsEver=Math.max(state.immortals.length, safeNum(data.maxImmortalsEver));
   selectedForBreeding=[];rebuildBestEverTraits();migrateLegacyProgress();checkMilestones();
   tickCityGold();
   checkLoginReward();
@@ -1104,6 +1106,7 @@ window.confirmImmortalName=()=>{
   const c=state.population.find(x=>x.id===pendingImmortalId);if(!c)return;
   state.population=state.population.filter(x=>x.id!==pendingImmortalId);
   state.immortals=[...(state.immortals||[]),{id:pendingImmortalId,name,creature:c,skills:[],fitness:calcFitness(c)}];
+  if(state.immortals.length>safeNum(state.maxImmortalsEver)) state.maxImmortalsEver=state.immortals.length;
   // Secret: named an immortal "Darwin"
   if(name.toLowerCase()==='darwin') state.namedImmortalDarwin=true;
   pendingImmortalId=null;
@@ -1117,12 +1120,11 @@ window.disposeImmortal=(id)=>{
   const im=(state.immortals||[]).find(x=>x.id===id);if(!im)return;
   const refund=disposalGpRefund(im);
   if(!confirm(`Dispose of ${im.name}? You will receive ${refund} 🧪 back (50% of skill costs). This cannot be undone.`))return;
-  const countBefore=state.immortals.length;
   state.immortals=state.immortals.filter(x=>x.id!==id);
   state.genePoints+=refund;
   state.hasDisposedImmortal=true;
   state.disposedNames=[...(state.disposedNames||[]),im.name.toLowerCase()];
-  if(countBefore>=2&&state.immortals.length===0) state.scorchEarth=true;
+  if(safeNum(state.maxImmortalsEver)>=2&&state.immortals.length===0) state.scorchEarth=true;
   addLog(`${im.name} disposed. Recovered ${refund} 🧪.`,'gp');
   checkMilestones();renderAll();
 };
