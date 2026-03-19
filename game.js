@@ -617,6 +617,10 @@ const SECRET_MILESTONES=[
   {id:'ms_s_broke_dia', name:'Diamond Broke',      desc:'Spend every last diamond — reach exactly 0 💎.',                   check:s=>s.diamonds===0&&safeNum(s.totalDiamondsEarned)>=50, gp:5},
   {id:'ms_s_prestige',  name:'Reborn',             desc:'Prestige your first immortal.',                                      check:s=>(s.immortals||[]).some(im=>im.prestiged), gp:5},
   {id:'ms_s_darwin',    name:'In His Name',        desc:'Name an immortal "Darwin".',                                         check:s=>!!s.namedImmortalDarwin, gp:5},
+  {id:'ms_s_mendel',   name:'Father of Genetics', desc:'Name your city "Mendel".',                                           check:s=>s.city?.name?.toLowerCase()==='mendel', gp:5},
+  {id:'ms_s_adameve',  name:'In The Beginning',   desc:'Have two immortals named Adam and Eve simultaneously.',              check:s=>(s.immortals||[]).some(im=>im.name?.toLowerCase()==='adam')&&(s.immortals||[]).some(im=>im.name?.toLowerCase()==='eve'), gp:5},
+  {id:'ms_s_scorch',   name:'Scorched Earth',     desc:'Dispose of your last immortal when you had 2 or more.',             check:s=>!!s.scorchEarth, gp:5},
+  {id:'ms_s_plagiarist',name:'Plagiarist',         desc:'Name an immortal the same name as one you already disposed of.',   check:s=>!!(s.disposedNames||[]).some(n=>(s.immortals||[]).some(im=>im.name?.toLowerCase()===n)), gp:5},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -651,7 +655,7 @@ function defaultState(){
     everBroke:false,culledOwnRecord:false,usedLegendaryStock:false,hasSetUsername:false,
     bredBeforeFirstCull:0,firstCullDone:false,culledFromThree:false,
     triedUsernameBG:false,savedAtMidnight:false,sameParentCount:0,lastParentPair:null,
-    breedCapHits:0,lbRefreshCount:0,autoOnlyBreeds:0,hasDisposedImmortal:false,namedImmortalDarwin:false,
+    breedCapHits:0,lbRefreshCount:0,autoOnlyBreeds:0,hasDisposedImmortal:false,namedImmortalDarwin:false,scorchEarth:false,disposedNames:[],
     diamondBuffer:0,lastArchivistGen:1,totalResearchDiamondsEarned:0,
     totalVaultOpens:0,ownedIcons:[],selectedIcon:null,
     vault_aquatic_opens:0,vault_flora_opens:0,vault_cosmos_opens:0,
@@ -790,7 +794,7 @@ function sanitiseState(s){
     triedUsernameBG:!!s.triedUsernameBG,savedAtMidnight:!!s.savedAtMidnight,
     sameParentCount:safeNum(s.sameParentCount),lastParentPair:s.lastParentPair||null,
     breedCapHits:safeNum(s.breedCapHits),lbRefreshCount:safeNum(s.lbRefreshCount),autoOnlyBreeds:safeNum(s.autoOnlyBreeds),
-    hasDisposedImmortal:!!s.hasDisposedImmortal,namedImmortalDarwin:!!s.namedImmortalDarwin,
+    hasDisposedImmortal:!!s.hasDisposedImmortal,namedImmortalDarwin:!!s.namedImmortalDarwin,scorchEarth:!!s.scorchEarth,disposedNames:Array.isArray(s.disposedNames)?s.disposedNames:[],
     diamondBuffer:safeNum(s.diamondBuffer),lastArchivistGen:safeNum(s.lastArchivistGen,1),
     totalResearchDiamondsEarned:safeNum(s.totalResearchDiamondsEarned),totalVaultOpens:safeNum(s.totalVaultOpens),
     ownedIcons:[...new Set(Array.isArray(s.ownedIcons)?s.ownedIcons:[])],selectedIcon:s.selectedIcon||null,
@@ -1113,9 +1117,12 @@ window.disposeImmortal=(id)=>{
   const im=(state.immortals||[]).find(x=>x.id===id);if(!im)return;
   const refund=disposalGpRefund(im);
   if(!confirm(`Dispose of ${im.name}? You will receive ${refund} 🧪 back (50% of skill costs). This cannot be undone.`))return;
+  const countBefore=state.immortals.length;
   state.immortals=state.immortals.filter(x=>x.id!==id);
   state.genePoints+=refund;
   state.hasDisposedImmortal=true;
+  state.disposedNames=[...(state.disposedNames||[]),im.name.toLowerCase()];
+  if(countBefore>=2&&state.immortals.length===0) state.scorchEarth=true;
   addLog(`${im.name} disposed. Recovered ${refund} 🧪.`,'gp');
   checkMilestones();renderAll();
 };
@@ -1436,7 +1443,7 @@ window.saveCityName=()=>{
   if(val.length>20)return addLog('City name max 20 chars.','warn');
   state.city.name=val;
   addLog(`🏙️ City renamed to "${val}".`,'highlight');
-  renderStats();renderCity();
+  checkMilestones();renderStats();renderCity();
 };
 
 // Set city banner colour
