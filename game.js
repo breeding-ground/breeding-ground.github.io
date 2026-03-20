@@ -1408,14 +1408,17 @@ window.cityUpgradeRI2=(immortalId)=>{
 window.cityUpgradeRI3=()=>{
   if(state.city.riLevel>=3)return addLog('Already at Level 3.','warn');
   if(state.city.riLevel<2)return addLog('Upgrade to Level 2 first.','warn');
-  // Exclude milestones that are impossible without RI Level 3:
-  // mt_ri_3 = the RI L3 milestone itself
-  // mt_ris_40 = requires 40 RI skills, but 10 of them need RI L3 first
-  const EXCLUDED=['mt_ri_3','mt_ris_40'];
-  const allIds=[...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)].filter(id=>!EXCLUDED.includes(id));
+  // Exclude city_ri and city_skills tracks entirely — self-referential,
+  // since you need RI L3 to unlock the skills required to complete them
+  const EXCLUDED_TRACKS=new Set(['city_ri','city_skills']);
+  const EXCLUDED_IDS=new Set(
+    MILESTONE_TRACKS.filter(t=>EXCLUDED_TRACKS.has(t.id)).flatMap(t=>t.tiers.map(x=>x.id))
+  );
+  const allIds=[...MILESTONE_TRACKS.flatMap(t=>t.tiers.map(x=>x.id)),...SECRET_MILESTONES.map(m=>m.id)]
+    .filter(id=>!EXCLUDED_IDS.has(id));
   const done=allIds.filter(id=>state.completedMilestones.includes(id)).length;
   const total=allIds.length;
-  if(done<total)return addLog(`Complete all milestones first — ${done}/${total} done (excluding RI Lv3 itself).`,'warn');
+  if(done<total)return addLog(`Complete all milestones first — ${done}/${total} done (RI level & skills tracks excluded).`,'warn');
   state.city.riLevel=3;
   addLog('🏛️ All milestones completed. Research Institute reached Level 3 — ABSOLUTE DOMINION!','highlight');
   checkMilestones();renderStats();renderCity();
